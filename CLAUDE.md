@@ -17,6 +17,8 @@
 - appsscript.json の timeZone を Asia/Tokyo 以外にすること
 - 承認なしのファイル削除・リネーム
 - 実顧客データをコード・コメント・テストに書くこと(テストはダミーデータのみ)
+- `clasp create` の再実行(接続先は `.clasp.json` が正。迷ったら停止して報告)
+- `setupNewEnvironment()` の再実行提案(新環境はすでに存在する)
 
 ## clasp push が差分エラーで失敗したとき
 --force で解決しない。原因を調べて報告し、指示を待つこと。
