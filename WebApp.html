@@ -67,9 +67,6 @@
       margin: 14px 0 8px; display: flex; align-items: center; gap: 6px;
     }
     h3.blocklabel:first-of-type { margin-top: 4px; }
-    h4.daylabel {
-      font-size: 12px; color: #9a9284; font-weight: bold; margin: 8px 0 6px;
-    }
     .badge {
       display: inline-block; min-width: 20px; text-align: center;
       background: #eef0ea; color: #4c5145; border-radius: 999px;
@@ -118,6 +115,10 @@
     .chip.overdue { background: #fbdede; color: #a3271f; }
     .chip.warn { background: #fdecc8; color: #8a5a00; }
     .chip.ad { background: #e4e8fb; color: #33449c; }
+    .chip.shoot-badge { background: #dcecff; color: #1c4f91; }
+
+    /* 撮影カードは仕分けではなく色帯+バッジで目立たせる */
+    .item-card.shoot-event { border-left: 4px solid #4f8ff7; }
 
     /* 撮影日からの経過日数バッジ(右上) */
     .days-badge {
@@ -294,15 +295,9 @@
       <section class="card" id="sec-shoots" style="display:none">
         <h2>📅 今日の予定 <span class="badge accent" id="cnt-shoots">0</span></h2>
         <h3 class="blocklabel">📆 今日</h3>
-        <h4 class="daylabel">🎬 撮影</h4>
-        <div id="list-shoots-today-shoot"></div>
-        <h4 class="daylabel">📋 その他の予定</h4>
-        <div id="list-shoots-today-other"></div>
+        <div id="list-shoots-today"></div>
         <h3 class="blocklabel">📆 明日</h3>
-        <h4 class="daylabel">🎬 撮影</h4>
-        <div id="list-shoots-tomorrow-shoot"></div>
-        <h4 class="daylabel">📋 その他の予定</h4>
-        <div id="list-shoots-tomorrow-other"></div>
+        <div id="list-shoots-tomorrow"></div>
       </section>
 
       <section class="card" id="sec-review" style="display:none">
@@ -472,37 +467,46 @@
     }
 
     function renderShoots(shoots) {
-      const sec = document.getElementById('sec-shoots');
       document.getElementById('cnt-shoots').textContent = shoots.length;
-      sec.style.display = 'block';
+      document.getElementById('sec-shoots').style.display = 'block';
 
       const now = new Date();
       const todayIso = isoDateLocal_(now);
       const tomorrowIso = isoDateLocal_(new Date(now.getTime() + 86400000));
 
-      const groups = { 'today-shoot': [], 'today-other': [], 'tomorrow-shoot': [], 'tomorrow-other': [] };
-      shoots.forEach(function (s) {
-        const dayKey = s.date === todayIso ? 'today' : (s.date === tomorrowIso ? 'tomorrow' : null);
-        if (!dayKey) return; // 当日・翌日以外は対象外(通常は起きない)
-        const catKey = s.category === 'shoot' ? 'shoot' : 'other';
-        groups[dayKey + '-' + catKey].push(s);
-      });
+      const todayItems = shoots.filter(function (s) { return s.date === todayIso; });
+      const tomorrowItems = shoots.filter(function (s) { return s.date === tomorrowIso; });
+      sortByTime_(todayItems);
+      sortByTime_(tomorrowItems);
 
-      renderShootGroup_('list-shoots-today-shoot', groups['today-shoot'], true);
-      renderShootGroup_('list-shoots-today-other', groups['today-other'], false);
-      renderShootGroup_('list-shoots-tomorrow-shoot', groups['tomorrow-shoot'], true);
-      renderShootGroup_('list-shoots-tomorrow-other', groups['tomorrow-other'], false);
+      renderShootList_('list-shoots-today', todayItems);
+      renderShootList_('list-shoots-tomorrow', tomorrowItems);
+
+      // 静かな全滅の禁止: サーバーは件数があるのに画面の描画が0件なら、原因を明示する。
+      if (shoots.length > 0 && todayItems.length === 0 && tomorrowItems.length === 0) {
+        showError('表示処理に問題があります(データは' + shoots.length + '件あります)。' +
+          '日付の形式が一致していない可能性があります。');
+      }
     }
 
-    function renderShootGroup_(elementId, items, isShootCategory) {
+    // 終日を先頭、以降は時刻(HH:mm文字列)の昇順
+    function sortByTime_(items) {
+      items.sort(function (a, b) {
+        const ta = a.allDay ? '' : (a.time || '');
+        const tb = b.allDay ? '' : (b.time || '');
+        if (!ta && tb) return -1;
+        if (ta && !tb) return 1;
+        return ta < tb ? -1 : (ta > tb ? 1 : 0);
+      });
+    }
+
+    function renderShootList_(elementId, items) {
       const el = document.getElementById(elementId);
       if (!items.length) {
         el.innerHTML = '<div class="empty">なし</div>';
         return;
       }
-      el.innerHTML = isShootCategory
-        ? '<ul class="list">' + items.map(shootCardHtml_).join('') + '</ul>'
-        : items.map(otherEventCardHtml_).join('');
+      el.innerHTML = '<ul class="list">' + items.map(eventCardHtml_).join('') + '</ul>';
     }
 
     function closeButtonHtml_(eventId, date) {
@@ -511,34 +515,33 @@
         'onclick="event.stopPropagation(); doHideEvent(\'' + esc(eventId) + '\',\'' + esc(date) + '\')">×</button>';
     }
 
-    function shootCardHtml_(s) {
-      const cls = 'item-card' + (s.matchShootId ? ' clickable' : '');
+    // 撮影/その他を仕分けず単一リストで表示し、撮影カードだけ色帯+バッジで目立たせる
+    function eventCardHtml_(s) {
+      const isShoot = s.category === 'shoot';
+      const cls = 'item-card' + (isShoot ? ' shoot-event' : '') + (s.matchShootId ? ' clickable' : '');
       const onclick = s.matchShootId ? ' onclick="openShoot(\'' + esc(s.matchShootId) + '\')"' : '';
       const timeLabel = s.allDay ? '終日' : (s.time || '');
-      const title = (s.genre || s.lastName)
+      const badge = isShoot ? '<span class="chip shoot-badge">撮影</span> ' : '';
+
+      const title = (isShoot && (s.genre || s.lastName))
         ? (esc(s.genre) + ' ' + esc(s.lastName) + '様' + (s.people ? '(' + esc(s.people) + ')' : ''))
-        : esc(s.title || '(タイトル読み取り不可)');
+        : esc(s.title || (isShoot ? '(タイトル読み取り不可)' : '(タイトルなし)'));
+
       const subParts = [];
-      if (s.ageGender) subParts.push(esc(s.ageGender));
-      if (s.memo) subParts.push(esc(s.memo));
+      if (isShoot) {
+        if (s.ageGender) subParts.push(esc(s.ageGender));
+        if (s.memo) subParts.push(esc(s.memo));
+      }
       const sub = subParts.length ? '<div class="row-sub">' + subParts.join(' / ') + '</div>' : '';
-      const matchLine = s.matchCustomerName
+      const matchLine = (isShoot && s.matchCustomerName)
         ? '<div class="row-sub">候補: ' + esc(s.matchCustomerName) + '様' +
           (s.matchShootId ? ' → 過去の来店を見る' : '(過去の撮影記録なし)') + '</div>'
         : '';
+
       return '<li class="' + cls + '"' + onclick + '>' +
         closeButtonHtml_(s.eventId, s.date) +
-        '<div class="row-main"><span>' + esc(timeLabel) + ' ' + title + '</span></div>' +
+        '<div class="row-main"><span>' + badge + esc(timeLabel) + ' ' + title + '</span></div>' +
         sub + matchLine + '</li>';
-    }
-
-    function otherEventCardHtml_(s) {
-      const timeLabel = s.allDay ? '終日' : (s.time || '');
-      return '<div class="other-event-card">' +
-        closeButtonHtml_(s.eventId, s.date) +
-        '<span class="time">' + esc(timeLabel) + '</span>' +
-        '<span>' + esc(s.title || '(タイトルなし)') + '</span>' +
-        '</div>';
     }
 
     function renderHiddenEvents(hiddenEvents) {

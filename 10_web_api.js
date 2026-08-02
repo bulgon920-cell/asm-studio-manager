@@ -184,14 +184,18 @@ function readTodayShoots_(ss) {
     matchesById[m.todayShootId].push(m);
   });
   const hidden = readHiddenEvents_(ss); // 13_morning.js
+  // Sheetsが「2026-08-02」「15:00」等の文字列を日付/時刻値へ自動変換してしまうことがある
+  // (書き込み側でテキスト書式は指定済みだが、念のため読み取り側でも二重に安全化する)。
+  function safeDateStr_(v) { return (v instanceof Date) ? isoDate_(v) : (v || ''); }
+  function safeTimeStr_(v) { return (v instanceof Date) ? Utilities.formatDate(v, 'Asia/Tokyo', 'HH:mm') : (v || ''); }
+
   return readObjects_(ss, 'Today_Shoots')
-    .filter(function (r) { return !isEventHidden_(hidden, r.eventId, r.日付); })
     .map(function (r) {
       const cand = (matchesById[r.id] || [])[0]; // 最有力候補のみ表示(確定は人)
       return {
         eventId: r.eventId || '',
-        date: r.日付 || '',
-        time: r.時刻 || '',
+        date: safeDateStr_(r.日付),
+        time: safeTimeStr_(r.時刻),
         allDay: !!r.allDay,
         category: r.category === 'shoot' ? 'shoot' : 'other',
         genre: r.ジャンル || '',
@@ -203,7 +207,8 @@ function readTodayShoots_(ss) {
         matchCustomerName: cand ? cand.顧客名 : '',
         matchShootId: cand ? cand.直近shootId : ''
       };
-    });
+    })
+    .filter(function (r) { return !isEventHidden_(hidden, r.eventId, r.date); });
 }
 
 // ===== 案件詳細 =====

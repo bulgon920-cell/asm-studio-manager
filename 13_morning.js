@@ -245,10 +245,10 @@ function regenerateTodayShootsSheet_(ss, rows) {
   const lastRow = sh.getLastRow();
   if (lastRow > 1) sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).clearContent();
   if (!rows.length) return;
-  // 時刻列は「15:00」のような文字列をSheetsが時刻値へ自動変換してしまうことがあるため、
-  // 書き込み前にテキスト書式を明示する(読み出し時にDate化されるのを防ぐ)。
-  const timeCol = TODAY_SHOOTS_HEADERS_.indexOf('時刻') + 1;
-  sh.getRange(2, timeCol, rows.length, 1).setNumberFormat('@');
+  // 「15:00」「2026-08-02」のような文字列はSheetsが時刻/日付値へ自動変換してしまうことが
+  // あり、実際に日付列でこれが起きてクライアント側の日付比較が一致しない不具合が発生した。
+  // 個別の列だけでなく、書き込み範囲全体を書き込み前にテキスト書式にして再発を防ぐ。
+  sh.getRange(2, 1, rows.length, TODAY_SHOOTS_HEADERS_.length).setNumberFormat('@');
   const values = rows.map(todayShootRowToArray_);
   sh.getRange(2, 1, values.length, values[0].length).setValues(values);
 }
