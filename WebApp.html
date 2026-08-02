@@ -1008,9 +1008,10 @@
         : '<div class="empty">対象の節目はありません 🎉</div>';
 
       const noBirth = document.getElementById('lifecycle-no-birthday');
-      noBirth.textContent = data.noBirthdayCount > 0
-        ? '誕生日未登録の子: ' + data.noBirthdayCount + '件(節目の判定対象外)'
-        : '';
+      const notes = [];
+      if (data.noBirthdayCount > 0) notes.push('誕生日未登録の子: ' + data.noBirthdayCount + '件(節目の判定対象外)');
+      if (data.elapsedUnknownCount > 0) notes.push('背の順家族写真の判定不能: ' + data.elapsedUnknownCount + '家族(誕生日未登録の子を含む)');
+      noBirth.textContent = notes.join(' / ');
     }
 
     function lifecycleItemHtml_(it) {

@@ -218,23 +218,18 @@ function computeLifecycle_(ss, today) {
 
   // 経過型(背の順家族写真)は家族(顧客)単位・対象年(=今年)で判定する(唯一の毎年型)
   const elapsedRule = LIFECYCLE_RULES_.filter(function (r) { return r.kind === 'elapsed'; })[0];
+  var elapsedUnknownCount = 0;
   if (elapsedRule) {
     customers.forEach(function (cust) {
       if (businessNames.indexOf(cust.顧客名) >= 0) return;
-      const famMembers = members.filter(function (m) {
-        return m.customerId === cust.customerId && m.誕生日 instanceof Date;
-      });
-      if (!famMembers.length) return;
-      const youngest = famMembers.reduce(function (a, b) {
-        return a.誕生日.getTime() > b.誕生日.getTime() ? a : b; // 誕生日が新しい方が年少
-      });
-      if (ageInYears_(youngest.誕生日, today) < elapsedRule.minAge) return;
-
+      const famMembers = members.filter(function (m) { return m.customerId === cust.customerId; });
       const custShoots = shootsByCustomer[cust.customerId] || [];
-      const lastShoot = latestShoot_(custShoots);
-      if (!lastShoot || !(lastShoot.撮影日 instanceof Date)) return;
-      if (monthsBetween_(lastShoot.撮影日, today) < elapsedRule.minMonthsSinceVisit) return;
+      const evalResult = evalElapsedFamily_(famMembers, custShoots, today, elapsedRule);
+      if (!evalResult) return;
+      if (evalResult.excluded === 'unknown-birthday') { elapsedUnknownCount++; return; }
+      if (evalResult.excluded) return; // recent-infant-shoot 等、件数計上不要な除外
 
+      const youngest = evalResult.youngest, lastShoot = evalResult.lastShoot;
       const key = elapsedRule.name + '|' + today.getFullYear() + '|' + youngest.memberId;
       results.push(buildLifecycleItem_(youngest.memberId, cust.customerId, youngest.名前 + '(末っ子)',
         youngest.誕生日, elapsedRule.name, today.getFullYear(), null, cust, lastShoot, memoByName, contacted, key));
@@ -247,7 +242,37 @@ function computeLifecycle_(ss, today) {
     return da < db ? -1 : (da > db ? 1 : 0);
   });
 
-  return { items: results, noBirthdayCount: noBirthdayCount };
+  return { items: results, noBirthdayCount: noBirthdayCount, elapsedUnknownCount: elapsedUnknownCount };
+}
+
+// 背の順家族写真(経過型)の家族単位判定。誕生日未登録の子が1人でもいれば判定不能として除外し、
+// 直近12ヶ月に乳児系ジャンルの撮影があれば「節目の階段側で拾われる」ため除外する(バグA対応)。
+const LIFECYCLE_INFANT_GENRES_ = ['お宮参り', 'ハーフバースデー', 'バースデー'];
+
+function evalElapsedFamily_(famMembers, custShoots, today, elapsedRule) {
+  if (!famMembers.length) return null;
+
+  const hasUnknownBirthday = famMembers.some(function (m) { return !(m.誕生日 instanceof Date); });
+  if (hasUnknownBirthday) return { excluded: 'unknown-birthday' };
+
+  const youngest = famMembers.reduce(function (a, b) {
+    return a.誕生日.getTime() > b.誕生日.getTime() ? a : b; // 誕生日が新しい方が年少
+  });
+  if (ageInYears_(youngest.誕生日, today) < elapsedRule.minAge) return null;
+
+  const hasRecentInfantShoot = custShoots.some(function (s) {
+    if (!(s.撮影日 instanceof Date)) return false;
+    if (addMonths_(s.撮影日, 12) <= today) return false; // 撮影から12ヶ月以上経過していれば対象外
+    return LIFECYCLE_INFANT_GENRES_.some(function (g) { return String(s.ジャンル || '').indexOf(g) >= 0; });
+  });
+  if (hasRecentInfantShoot) return { excluded: 'recent-infant-shoot' };
+
+  const lastShoot = latestShoot_(custShoots);
+  if (!lastShoot || !(lastShoot.撮影日 instanceof Date)) return null;
+  // バグB: 月の引き算ではなく日付演算(最終来店日+Nヶ月 <= 今日)で判定する
+  if (addMonths_(lastShoot.撮影日, elapsedRule.minMonthsSinceVisit) > today) return null;
+
+  return { youngest: youngest, lastShoot: lastShoot };
 }
 
 function buildLifecycleItem_(memberId, customerId, childName, birthDate, milestoneName, targetYear,
@@ -343,10 +368,6 @@ function ageInYears_(birth, asOf) {
   return age;
 }
 
-function monthsBetween_(from, to) {
-  return (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
-}
-
 function addMonths_(date, months) {
   return new Date(date.getFullYear(), date.getMonth() + months, date.getDate());
 }
@@ -410,6 +431,36 @@ function testLifecycle() {
     isWithinDisplayWindow_(occD, leadDefault, new Date(2026, 6, 31)), true);
   check('d-5: 翌月末の翌日(2026-08-01)は非表示',
     isWithinDisplayWindow_(occD, leadDefault, new Date(2026, 7, 1)), false);
+
+  const elapsedRule = LIFECYCLE_RULES_.filter(function (r) { return r.kind === 'elapsed'; })[0];
+
+  Logger.log('--- e. 末っ子2015年生+誕生日未登録の子あり+2025-09にお宮参り撮影 → 背の順に出ない ---');
+  const famE = [
+    { memberId: 'M-E1', 誕生日: new Date(2015, 5, 1), 名前: '長男' },
+    { memberId: 'M-E2', 誕生日: null, 名前: '次男(未登録)' } // 誕生日未登録
+  ];
+  const shootsE = [{ 撮影日: new Date(2025, 8, 10), ジャンル: 'お宮参り', 対象memberId: 'M-E2' }];
+  const resultE = evalElapsedFamily_(famE, shootsE, testToday, elapsedRule);
+  check('e-1: 誕生日未登録により判定不能で除外', resultE.excluded, 'unknown-birthday');
+
+  Logger.log('--- e(補足). 誕生日は全員既知だが直近12ヶ月に乳児系ジャンル撮影 → 背の順に出ない ---');
+  const famE2 = [{ memberId: 'M-E3', 誕生日: new Date(2015, 5, 1), 名前: '長男' }];
+  const shootsE2 = [{ 撮影日: new Date(2025, 8, 10), ジャンル: 'ハーフバースデー', 対象memberId: 'M-E3' }];
+  const resultE2 = evalElapsedFamily_(famE2, shootsE2, testToday, elapsedRule);
+  check('e-2: 直近12ヶ月の乳児系ジャンル撮影により除外', resultE2.excluded, 'recent-infant-shoot');
+
+  Logger.log('--- f. 最終来店が10ヶ月前(日付精度)→出ない。11ヶ月+1日前→出る ---');
+  const famF = [{ memberId: 'M-F1', 誕生日: new Date(2015, 5, 1), 名前: '長男' }];
+  const lastVisit10mo = addMonths_(testToday, -10); // ちょうど10ヶ月前
+  const shootsF10 = [{ 撮影日: lastVisit10mo, ジャンル: '七五三', 対象memberId: 'M-F1' }];
+  const resultF10 = evalElapsedFamily_(famF, shootsF10, testToday, elapsedRule);
+  check('f-1: 10ヶ月前は対象外', resultF10, null);
+
+  const lastVisit11mo1day = addMonths_(testToday, -11);
+  lastVisit11mo1day.setDate(lastVisit11mo1day.getDate() - 1); // 11ヶ月+1日前
+  const shootsF11 = [{ 撮影日: lastVisit11mo1day, ジャンル: '七五三', 対象memberId: 'M-F1' }];
+  const resultF11 = evalElapsedFamily_(famF, shootsF11, testToday, elapsedRule);
+  check('f-2: 11ヶ月+1日前は対象', !!(resultF11 && !resultF11.excluded), true);
 
   Logger.log('=== testLifecycle結果: PASS=' + pass + ' / FAIL=' + fail + ' / 合計=' + (pass + fail) + ' ===');
 }

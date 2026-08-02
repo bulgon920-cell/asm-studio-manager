@@ -12,6 +12,11 @@ Web実装は WEB_SPEC_v1.0.md を正とする。
 4. git commit(日本語で「何を・なぜ」を書く)
 5. `clasp push`(--force は使わない)
 6. push結果とエディタでの確認手順を報告する
+7. **WebApp.htmlまたはWeb API(10_web_api.js/11_web_write_api.js/12_web_review_api.js/
+   13_morning.js/14_lifecycle.js等)に変更を加えた場合、完了報告に「新バージョンの
+   デプロイが必要」と必ず明記する。** clasp pushはコードを反映するだけでデプロイ済み
+   Webアプリには自動反映されないため、これを案内し忘れると古いバージョンのまま
+   検証されてしまう(2026-08-02に実際に発生)。
 
 ## 禁止事項
 - 中身のある既存GASプロジェクトへの `clasp push --force`
