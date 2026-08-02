@@ -119,6 +119,8 @@ function getToday() {
     todayShoots: readTodayShoots_(ss),
     // 朝の更新(13_morning.js)が失敗した場合のエラーを画面上部に表示するため(W4)
     morningError: getMorningConfigValue_(ss, 'LAST_ERROR') || '',
+    // 「非表示にした予定」の折りたたみ表示用(13_morning.js)
+    hiddenEvents: readHiddenEvents_(ss),
     needsReview: needsReview,
     todo: todo,
     waiting: waiting
@@ -158,6 +160,8 @@ function sortByElapsedDesc_(list) {
 
 // Today_Shoots/Today_Shoot_Matchesは13_morning.jsのmorningUpdate()が生成するビュー。
 // 未実行時は存在しない/空のことがある。
+// 非表示リスト(Config 区分=非表示予定)は再生成時に13_morning.js側で除外済みだが、
+// 念のためここでも二重にフィルタする(読み取り時点の安全網)。
 function readTodayShoots_(ss) {
   const sh = ss.getSheetByName('Today_Shoots');
   if (!sh) return [];
@@ -166,20 +170,27 @@ function readTodayShoots_(ss) {
     if (!matchesById[m.todayShootId]) matchesById[m.todayShootId] = [];
     matchesById[m.todayShootId].push(m);
   });
-  return readObjects_(ss, 'Today_Shoots').map(function (r) {
-    const cand = (matchesById[r.id] || [])[0]; // 最有力候補のみ表示(確定は人)
-    return {
-      time: r.時刻 || '',
-      genre: r.ジャンル || '',
-      lastName: r.姓 || '',
-      people: r.人数 || '',
-      ageGender: r.年齢性別 || '',
-      memo: r.自由メモ || '',
-      title: r.タイトル || '',
-      matchCustomerName: cand ? cand.顧客名 : '',
-      matchShootId: cand ? cand.直近shootId : ''
-    };
-  });
+  const hidden = readHiddenEvents_(ss); // 13_morning.js
+  return readObjects_(ss, 'Today_Shoots')
+    .filter(function (r) { return !isEventHidden_(hidden, r.eventId, r.日付); })
+    .map(function (r) {
+      const cand = (matchesById[r.id] || [])[0]; // 最有力候補のみ表示(確定は人)
+      return {
+        eventId: r.eventId || '',
+        date: r.日付 || '',
+        time: r.時刻 || '',
+        allDay: !!r.allDay,
+        category: r.category === 'shoot' ? 'shoot' : 'other',
+        genre: r.ジャンル || '',
+        lastName: r.姓 || '',
+        people: r.人数 || '',
+        ageGender: r.年齢性別 || '',
+        memo: r.自由メモ || '',
+        title: r.タイトル || '',
+        matchCustomerName: cand ? cand.顧客名 : '',
+        matchShootId: cand ? cand.直近shootId : ''
+      };
+    });
 }
 
 // ===== 案件詳細 =====

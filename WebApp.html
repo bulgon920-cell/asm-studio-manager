@@ -67,6 +67,9 @@
       margin: 14px 0 8px; display: flex; align-items: center; gap: 6px;
     }
     h3.blocklabel:first-of-type { margin-top: 4px; }
+    h4.daylabel {
+      font-size: 12px; color: #9a9284; font-weight: bold; margin: 8px 0 6px;
+    }
     .badge {
       display: inline-block; min-width: 20px; text-align: center;
       background: #eef0ea; color: #4c5145; border-radius: 999px;
@@ -80,13 +83,34 @@
     ul.list { list-style: none; margin: 0; padding: 0; }
     .item-card {
       background: #fbf9f4; border-radius: 14px; padding: 12px 13px; margin-bottom: 8px;
-      border: 1px solid #f0ece1;
+      border: 1px solid #f0ece1; position: relative;
     }
     .item-card:last-child { margin-bottom: 0; }
     .item-card.clickable { cursor: pointer; }
     .item-card.clickable:active { background: #f4efe2; }
-    .row-main { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; font-size: 15px; font-weight: bold; }
+    .row-main { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; font-size: 15px; font-weight: bold; padding-right: 22px; }
     .row-sub { font-size: 13px; color: #5c5548; margin-top: 4px; }
+
+    /* その他の予定: コンパクトなグレー表示 */
+    .other-event-card {
+      background: #f3f0e7; border-radius: 12px; padding: 9px 12px; margin-bottom: 6px;
+      border: 1px solid #e6e1d2; position: relative; display: flex; gap: 8px;
+      font-size: 14px; color: #6b6356; align-items: baseline; padding-right: 26px;
+    }
+    .other-event-card .time { font-weight: bold; color: #5c5548; flex-shrink: 0; }
+
+    /* 予定カードの×(非表示)ボタン */
+    .event-close {
+      position: absolute; top: 8px; right: 8px; width: 22px; height: 22px;
+      border: none; border-radius: 50%; background: #e6e1d2; color: #6b6356;
+      font-size: 14px; line-height: 22px; text-align: center; cursor: pointer; padding: 0;
+    }
+    .event-close:active { background: #d8d2bf; }
+    .undo-btn {
+      background: #77705f; color: #fff; border: none; border-radius: 999px;
+      padding: 4px 12px; font-size: 12px; font-weight: bold; cursor: pointer; flex-shrink: 0;
+    }
+    .undo-btn:active { opacity: 0.85; }
     .chip {
       display: inline-block; font-size: 12px; padding: 2px 9px; border-radius: 999px;
       background: #eef0ea; color: #4c5145; font-weight: bold; margin-right: 4px;
@@ -268,8 +292,17 @@
       </div>
 
       <section class="card" id="sec-shoots" style="display:none">
-        <h2>🎬 今日の撮影 <span class="badge accent" id="cnt-shoots">0</span></h2>
-        <div id="list-shoots"></div>
+        <h2>📅 今日の予定 <span class="badge accent" id="cnt-shoots">0</span></h2>
+        <h3 class="blocklabel">📆 今日</h3>
+        <h4 class="daylabel">🎬 撮影</h4>
+        <div id="list-shoots-today-shoot"></div>
+        <h4 class="daylabel">📋 その他の予定</h4>
+        <div id="list-shoots-today-other"></div>
+        <h3 class="blocklabel">📆 明日</h3>
+        <h4 class="daylabel">🎬 撮影</h4>
+        <div id="list-shoots-tomorrow-shoot"></div>
+        <h4 class="daylabel">📋 その他の予定</h4>
+        <div id="list-shoots-tomorrow-other"></div>
       </section>
 
       <section class="card" id="sec-review" style="display:none">
@@ -293,6 +326,13 @@
         <details>
           <summary><span class="arrow">待ち</span> <span class="badge violet" id="cnt-waiting">0</span></summary>
           <ul class="list" id="list-waiting"></ul>
+        </details>
+      </section>
+
+      <section class="card" id="sec-hidden" style="display:none">
+        <details>
+          <summary><span class="arrow">非表示にした予定</span> <span class="badge" id="cnt-hidden">0</span></summary>
+          <ul class="list" id="list-hidden"></ul>
         </details>
       </section>
     </div>
@@ -419,26 +459,62 @@
       document.getElementById('statsRow').style.display = 'grid';
 
       renderShoots(data.todayShoots);
+      renderHiddenEvents(data.hiddenEvents || []);
       renderReview(data.needsReview);
       renderTodo(data.todo);
       renderWaiting(data.waiting);
     }
 
+    function isoDateLocal_(d) {
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return d.getFullYear() + '-' + m + '-' + day;
+    }
+
     function renderShoots(shoots) {
       const sec = document.getElementById('sec-shoots');
-      const list = document.getElementById('list-shoots');
       document.getElementById('cnt-shoots').textContent = shoots.length;
       sec.style.display = 'block';
-      if (!shoots.length) {
-        list.innerHTML = '<div class="empty">本日・明日のカレンダー予定はありません(朝の更新が未実行の可能性もあります)</div>';
+
+      const now = new Date();
+      const todayIso = isoDateLocal_(now);
+      const tomorrowIso = isoDateLocal_(new Date(now.getTime() + 86400000));
+
+      const groups = { 'today-shoot': [], 'today-other': [], 'tomorrow-shoot': [], 'tomorrow-other': [] };
+      shoots.forEach(function (s) {
+        const dayKey = s.date === todayIso ? 'today' : (s.date === tomorrowIso ? 'tomorrow' : null);
+        if (!dayKey) return; // 当日・翌日以外は対象外(通常は起きない)
+        const catKey = s.category === 'shoot' ? 'shoot' : 'other';
+        groups[dayKey + '-' + catKey].push(s);
+      });
+
+      renderShootGroup_('list-shoots-today-shoot', groups['today-shoot'], true);
+      renderShootGroup_('list-shoots-today-other', groups['today-other'], false);
+      renderShootGroup_('list-shoots-tomorrow-shoot', groups['tomorrow-shoot'], true);
+      renderShootGroup_('list-shoots-tomorrow-other', groups['tomorrow-other'], false);
+    }
+
+    function renderShootGroup_(elementId, items, isShootCategory) {
+      const el = document.getElementById(elementId);
+      if (!items.length) {
+        el.innerHTML = '<div class="empty">なし</div>';
         return;
       }
-      list.innerHTML = '<ul class="list">' + shoots.map(shootCardHtml_).join('') + '</ul>';
+      el.innerHTML = isShootCategory
+        ? '<ul class="list">' + items.map(shootCardHtml_).join('') + '</ul>'
+        : items.map(otherEventCardHtml_).join('');
+    }
+
+    function closeButtonHtml_(eventId, date) {
+      if (!eventId) return '';
+      return '<button class="event-close" title="この予定を非表示にする" ' +
+        'onclick="event.stopPropagation(); doHideEvent(\'' + esc(eventId) + '\',\'' + esc(date) + '\')">×</button>';
     }
 
     function shootCardHtml_(s) {
       const cls = 'item-card' + (s.matchShootId ? ' clickable' : '');
       const onclick = s.matchShootId ? ' onclick="openShoot(\'' + esc(s.matchShootId) + '\')"' : '';
+      const timeLabel = s.allDay ? '終日' : (s.time || '');
       const title = (s.genre || s.lastName)
         ? (esc(s.genre) + ' ' + esc(s.lastName) + '様' + (s.people ? '(' + esc(s.people) + ')' : ''))
         : esc(s.title || '(タイトル読み取り不可)');
@@ -451,8 +527,51 @@
           (s.matchShootId ? ' → 過去の来店を見る' : '(過去の撮影記録なし)') + '</div>'
         : '';
       return '<li class="' + cls + '"' + onclick + '>' +
-        '<div class="row-main"><span>' + esc(s.time) + ' ' + title + '</span></div>' +
+        closeButtonHtml_(s.eventId, s.date) +
+        '<div class="row-main"><span>' + esc(timeLabel) + ' ' + title + '</span></div>' +
         sub + matchLine + '</li>';
+    }
+
+    function otherEventCardHtml_(s) {
+      const timeLabel = s.allDay ? '終日' : (s.time || '');
+      return '<div class="other-event-card">' +
+        closeButtonHtml_(s.eventId, s.date) +
+        '<span class="time">' + esc(timeLabel) + '</span>' +
+        '<span>' + esc(s.title || '(タイトルなし)') + '</span>' +
+        '</div>';
+    }
+
+    function renderHiddenEvents(hiddenEvents) {
+      const sec = document.getElementById('sec-hidden');
+      const list = document.getElementById('list-hidden');
+      document.getElementById('cnt-hidden').textContent = hiddenEvents.length;
+      if (!hiddenEvents.length) {
+        sec.style.display = 'none';
+        return;
+      }
+      sec.style.display = 'block';
+      list.innerHTML = hiddenEvents.map(function (h) {
+        return '<li class="item-card">' +
+          '<div class="row-main"><span>' + esc(h.date) + 'の予定</span>' +
+          '<button class="undo-btn" onclick="doUnhideEvent(\'' + esc(h.eventId) + '\',\'' + esc(h.date) + '\')">戻す</button></div>' +
+          '<div class="row-sub">非表示登録: ' + esc(h.registeredAt) + '</div></li>';
+      }).join('');
+    }
+
+    function doHideEvent(eventId, date) {
+      clearError();
+      google.script.run
+        .withSuccessHandler(function () { showOk('予定を非表示にしました。'); loadToday(); })
+        .withFailureHandler(function (err) { showError(err.message || err); })
+        .hideEvent(eventId, date);
+    }
+
+    function doUnhideEvent(eventId, date) {
+      clearError();
+      google.script.run
+        .withSuccessHandler(function () { showOk('予定を再表示しました。'); loadToday(); })
+        .withFailureHandler(function (err) { showError(err.message || err); })
+        .unhideEvent(eventId, date);
     }
 
     function reviewItemHtml_(it) {

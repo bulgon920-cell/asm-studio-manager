@@ -19,14 +19,20 @@
 function morningUpdate() {
   const ss = SpreadsheetApp.openById(TARGET_SPREADSHEET_ID);
   try {
+    ensureGenreListConfig_(ss);
+    pruneOldHiddenEntries_(ss);
+    const hidden = readHiddenEvents_(ss);
+    const genreList = readGenreList_(ss);
+
     const events = fetchCalendarEvents_();
     const seqByDate = {};
-    const todayRows = events.map(function (ev) {
+    const allRows = events.map(function (ev) {
       const start = ev.getStartTime();
       const dstr = Utilities.formatDate(start, 'Asia/Tokyo', 'yyyyMMdd');
       seqByDate[dstr] = (seqByDate[dstr] || 0) + 1;
-      return buildTodayShootRow_(ev, dstr, seqByDate[dstr]);
+      return buildTodayShootRow_(ev, dstr, seqByDate[dstr], genreList);
     });
+    const todayRows = allRows.filter(function (r) { return !isEventHidden_(hidden, r.eventId, r.dateIso); });
     const matches = buildMatches_(ss, todayRows);
 
     regenerateTodayShootsSheet_(ss, todayRows);
@@ -92,15 +98,21 @@ function fetchCalendarEvents_() {
   return cal.getEvents(start, end);
 }
 
-function buildTodayShootRow_(ev, dstr, seq) {
+function buildTodayShootRow_(ev, dstr, seq, genreList) {
   const title = ev.getTitle();
   const parsedTitle = parseEventTitle_(title);
   const desc = parseEventDescription_(ev.getDescription());
+  const allDay = ev.isAllDayEvent();
   const start = ev.getStartTime();
   return {
     id: 'T-' + dstr + '-' + pad_(seq, 2),
-    time: Utilities.formatDate(start, 'Asia/Tokyo', 'HH:mm'),
-    date: start,
+    eventId: ev.getId(),
+    // 終日予定は時刻を持たない(all-day予定のgetStartTime()はタイムゾーンの都合で
+    // ずれた時刻を返すため、そもそも文字列化しない)
+    time: allDay ? '' : Utilities.formatDate(start, 'Asia/Tokyo', 'HH:mm'),
+    allDay: allDay,
+    dateIso: Utilities.formatDate(start, 'Asia/Tokyo', 'yyyy-MM-dd'),
+    category: isShootEvent_(title, genreList) ? 'shoot' : 'other',
     genre: parsedTitle ? parsedTitle.genre : '',
     lastName: parsedTitle ? parsedTitle.lastName : '',
     people: desc.people,
@@ -116,6 +128,13 @@ function parseEventTitle_(title) {
   const m = String(title || '').match(/^[●○]?\s*(\S+)[\s\S]*?\bfor\s+(\S+)\s*$/);
   if (!m) return null;
   return { genre: m[1], lastName: m[2] };
+}
+
+// 「撮影」判定: タイトルが●/○で始まる、またはConfig(区分=ジャンル)の語をタイトルに含む
+function isShootEvent_(title, genreList) {
+  const t = String(title || '');
+  if (/^[●○]/.test(t)) return true;
+  return genreList.some(function (g) { return g && t.indexOf(g) >= 0; });
 }
 
 // 説明欄: ラベル付き行(phone number/ご来店人数/年齢・性別)+自由メモ行
@@ -187,7 +206,11 @@ function buildMatches_(ss, todayRows) {
 
 // ===== Today_Shoots / Today_Shoot_Matches / Today_Task_Board の再生成 =====
 
-const TODAY_SHOOTS_HEADERS_ = ['id', '時刻', 'ジャンル', '姓', '人数', '年齢性別', '自由メモ', '電話番号', 'タイトル', '日付'];
+const TODAY_SHOOTS_HEADERS_ = [
+  'id', 'eventId', '時刻', 'allDay', 'category', 'ジャンル', '姓', '人数',
+  '年齢性別', '自由メモ', '電話番号', 'タイトル', '日付'
+];
+const TODAY_SHOOTS_TIME_COL_ = 3; // '時刻'列(1始まり)。Sheetsが時刻文字列を自動変換しないようテキスト書式にする
 
 function getOrCreateTodayShootsSheet_(ss) {
   var sh = ss.getSheetByName('Today_Shoots');
@@ -203,8 +226,12 @@ function regenerateTodayShootsSheet_(ss, rows) {
   const lastRow = sh.getLastRow();
   if (lastRow > 1) sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).clearContent();
   if (!rows.length) return;
+  // 時刻列は「15:00」のような文字列をSheetsが時刻値へ自動変換してしまうことがあるため、
+  // 書き込み前にテキスト書式を明示する(読み出し時にDate化されるのを防ぐ)。
+  sh.getRange(2, TODAY_SHOOTS_TIME_COL_, rows.length, 1).setNumberFormat('@');
   const values = rows.map(function (r) {
-    return [r.id, r.time, r.genre, r.lastName, r.people, r.ageGender, r.memo, r.phone, r.title, r.date];
+    return [r.id, r.eventId, r.time, r.allDay, r.category, r.genre, r.lastName,
+      r.people, r.ageGender, r.memo, r.phone, r.title, r.dateIso];
   });
   sh.getRange(2, 1, values.length, values[0].length).setValues(values);
 }
@@ -283,6 +310,129 @@ function readNextActionMap_(ss) {
     if (values[r][0] === '次の行動') map[values[r][1]] = values[r][2];
   }
   return map;
+}
+
+// ===== ジャンル一覧(区分=ジャンル)。「撮影」判定に使う(§1.1) =====
+
+const GENRE_LIST_SEED_ = [
+  '七五三', '成人式', '成人記念', '振袖', '二十歳', 'はたち', 'お宮参り',
+  'ハーフバースデー', 'バースデー', '卒業', '入学', '家族写真', '記念撮影'
+];
+
+function ensureGenreListConfig_(ss) {
+  const sh = ss.getSheetByName('Config');
+  const values = sh.getDataRange().getValues();
+  for (var r = 1; r < values.length; r++) {
+    if (values[r][0] === 'ジャンル') return; // 既に1件でもあれば初期化済み
+  }
+  const rows = GENRE_LIST_SEED_.map(function (g) { return ['ジャンル', g, '', '', '']; });
+  sh.getRange(sh.getLastRow() + 1, 1, rows.length, 5).setValues(rows);
+  Logger.log('Configにジャンル一覧の初期値を' + rows.length + '件登録しました。');
+}
+
+function readGenreList_(ss) {
+  const sh = ss.getSheetByName('Config');
+  const values = sh.getDataRange().getValues();
+  const list = [];
+  for (var r = 1; r < values.length; r++) {
+    if (values[r][0] === 'ジャンル' && values[r][1]) list.push(values[r][1]);
+  }
+  return list;
+}
+
+// ===== 非表示にした予定(区分=非表示予定)。今日の予定カードの×/戻す(§1.1) =====
+
+const HIDDEN_EVENT_EXPIRE_DAYS_ = 15;
+
+function hideEvent(eventId, date) {
+  if (!eventId || !date) throw new Error('eventIdとdateは必須です。');
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(15000)) {
+    throw new Error('他の操作が実行中のため待機できませんでした。しばらくして再実行してください。');
+  }
+  try {
+    const ss = SpreadsheetApp.openById(TARGET_SPREADSHEET_ID);
+    addHiddenEvent_(ss, eventId, date);
+    appendEvent_(ss, eventId, '予定を非表示', '', date, 'Web(非表示)');
+    return sanitizeForClient_({ eventId: eventId, date: date });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function unhideEvent(eventId, date) {
+  if (!eventId || !date) throw new Error('eventIdとdateは必須です。');
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(15000)) {
+    throw new Error('他の操作が実行中のため待機できませんでした。しばらくして再実行してください。');
+  }
+  try {
+    const ss = SpreadsheetApp.openById(TARGET_SPREADSHEET_ID);
+    removeHiddenEvent_(ss, eventId, date);
+    appendEvent_(ss, eventId, '予定の非表示を解除', date, '', 'Web(非表示)');
+    return sanitizeForClient_({ eventId: eventId, date: date });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function hiddenEventKey_(eventId, date) { return eventId + '|' + date; }
+
+function addHiddenEvent_(ss, eventId, date) {
+  const sh = ss.getSheetByName('Config');
+  const key = hiddenEventKey_(eventId, date);
+  const values = sh.getDataRange().getValues();
+  for (var r = 1; r < values.length; r++) {
+    if (values[r][0] === '非表示予定' && values[r][1] === key) return; // 既に登録済み(冪等)
+  }
+  const now = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
+  sh.appendRow(['非表示予定', key, now, date, eventId]);
+}
+
+function removeHiddenEvent_(ss, eventId, date) {
+  const sh = ss.getSheetByName('Config');
+  const key = hiddenEventKey_(eventId, date);
+  const values = sh.getDataRange().getValues();
+  for (var r = values.length - 1; r >= 1; r--) {
+    if (values[r][0] === '非表示予定' && values[r][1] === key) {
+      sh.deleteRow(r + 1);
+      return;
+    }
+  }
+}
+
+// 非表示リストを読む。{eventId, date, registeredAt} の配列。
+function readHiddenEvents_(ss) {
+  const sh = ss.getSheetByName('Config');
+  const values = sh.getDataRange().getValues();
+  const list = [];
+  for (var r = 1; r < values.length; r++) {
+    if (values[r][0] === '非表示予定') {
+      list.push({ registeredAt: values[r][2], date: values[r][3], eventId: values[r][4] });
+    }
+  }
+  return list;
+}
+
+function isEventHidden_(hiddenList, eventId, date) {
+  return hiddenList.some(function (h) { return h.eventId === eventId && h.date === date; });
+}
+
+// 登録から15日を超えた非表示エントリを削除する(Configの肥大防止。morningUpdateから呼ぶ)
+function pruneOldHiddenEntries_(ss) {
+  const sh = ss.getSheetByName('Config');
+  const values = sh.getDataRange().getValues();
+  const today = new Date();
+  const rowsToDelete = [];
+  for (var r = 1; r < values.length; r++) {
+    if (values[r][0] !== '非表示予定') continue;
+    const registeredAt = toDate_(values[r][2]); // 02_migrate.js
+    if (!registeredAt) continue;
+    if (daysBetween_(registeredAt, today) > HIDDEN_EVENT_EXPIRE_DAYS_) rowsToDelete.push(r + 1);
+  }
+  rowsToDelete.sort(function (a, b) { return b - a; }); // 下から消す
+  rowsToDelete.forEach(function (rowIndex) { sh.deleteRow(rowIndex); });
+  if (rowsToDelete.length) Logger.log('期限切れの非表示予定を' + rowsToDelete.length + '件削除しました。');
 }
 
 // ===== Configの朝の更新状態(区分=morning)の読み書き =====
