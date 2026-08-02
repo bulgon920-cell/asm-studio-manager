@@ -7,9 +7,8 @@
  *
  * 【現在の状態】
  * getSales(年,月): 実装済み(2025年04月シートを実読してブロック定義を確定)。
- * getAnnual(年): 未実装。年次分析シート(例: "2026年店分析")の実際のセル配置が
- * まだ分かっていないため、先に inspectSalesSheet() でレイアウトを特定してから実装する
- * (SALES_SPEC_v1.0.md §0-3「推測しない」)。
+ * getAnnual(年): 実装済み(2026年店分析シートを実読してブロック定義を確定。
+ * 行42以降の副次集計(葬儀・学校等)はSALES_SPEC_v1.0.md §2の対象外のため未読み取り)。
  *
  * sanitizeForClient_ は 10_web_api.js のものを再利用する(再定義しない)。
  */
@@ -180,10 +179,109 @@ function getSales(year, month) {
   return sanitizeForClient_(result);
 }
 
-// function getAnnual(year) { ... } — 年次分析シートの実読後に実装する。
+// ===== 年次分析シート ブロック定義(2026年店分析を実読して確定。2026-08-02) =====
+//
+// シート名: "YYYY年店分析"(A1セルに年が入っている)。
+//
+// 行1: 月ヘッダー。C=1月, D=2月, ... N=12月(列C〜Nの12列)。
+//      O=合計, P=平均客単, Q=前年比, R=全体比率, S=着物(ラベル), T=着物比率。
+//
+// 行2〜27: 写真ジャンル13種、2行1組(七五三,お宮参り,バースデー,家族写真,
+//   プロフィール,マタニティ,成人式,ブライダル,その他撮影,ハーフBD,ハーフ成人,
+//   入卒業,ペット の順。ラベル文言は月次シートと完全一致しない場合があるが、
+//   シート表記のまま読み取る=正規化しない)。
+//   対象行(r)  : ジャンル名(A) / 撮影件数 月別(C〜N) / 件数合計(O)
+//   直後の行(r+1): 売上 月別(C〜N) / 売上合計(O) / 平均客単(P) / 前年比(Q) /
+//                  全体比率(R) / 着物(S) / 着物比率(T)
+//
+// 行28-29: スタジオ合計(当年)。件数=行28(合計はO28、前年比はQ28に例外的に乗る)、
+//          売上=行29(合計O29、平均客単P29、前年比Q29、構成比R29)。
+// 行33-34: 前年(スタジオ)合計。件数=行33(合計O33)、売上=行34(合計O34)。
+// 行37-38: スタジオ前年比(月別)。件数=行37(合計O37)、売上=行38(合計O38)。
+//
+// 行42以降(葬儀・学校・過去年度比較等の副次集計)はSALES_SPEC_v1.0.md §2の
+// 対象範囲外のため、v1では読み取らない。
+//
+// #REF!/#DIV/0!等のエラー値は "—" に変換して返す(件数はerrorCellCountに集計)。
 
-// ===== 調査用・一時呼び出し(getSales実装の検証用。確認後に削除する) =====
+const SALES_ANNUAL_MONTH_COLS_ = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]; // C〜N = 1月〜12月
+const SALES_ANNUAL_GENRE_ROWS_ = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26];
+
+function readAnnualMonths_(values, errCounter, row) {
+  return SALES_ANNUAL_MONTH_COLS_.map(function (c) { return salesCell_(values, errCounter, row, c); });
+}
+
+function readAnnualGenreBlock_(values, errCounter, r) {
+  return {
+    genre: salesCell_(values, errCounter, r, 1),
+    countsByMonth: readAnnualMonths_(values, errCounter, r),
+    countTotal: salesCell_(values, errCounter, r, 15),
+    salesByMonth: readAnnualMonths_(values, errCounter, r + 1),
+    salesTotal: salesCell_(values, errCounter, r + 1, 15),
+    avgUnitPrice: salesCell_(values, errCounter, r + 1, 16),
+    yoyRate: salesCell_(values, errCounter, r + 1, 17),
+    shareRate: salesCell_(values, errCounter, r + 1, 18),
+    kimono: salesCell_(values, errCounter, r + 1, 19),
+    kimonoRate: salesCell_(values, errCounter, r + 1, 20)
+  };
+}
+
+function getAnnual(year) {
+  const sheetName = year + '年店分析';
+  const ss = SpreadsheetApp.openById(SALES_SOURCE_ID);
+  const sh = ss.getSheetByName(sheetName);
+  if (!sh) {
+    return sanitizeForClient_({ found: false, sheetName: sheetName, year: year });
+  }
+
+  const lastRow = sh.getLastRow(), lastCol = sh.getLastColumn();
+  const values = sh.getRange(1, 1, lastRow, lastCol).getDisplayValues();
+  const errCounter = { count: 0 };
+
+  const studioTotal = {
+    countsByMonth: readAnnualMonths_(values, errCounter, 28),
+    countTotal: salesCell_(values, errCounter, 28, 15),
+    countYoyRate: salesCell_(values, errCounter, 28, 17),
+    salesByMonth: readAnnualMonths_(values, errCounter, 29),
+    salesTotal: salesCell_(values, errCounter, 29, 15),
+    avgUnitPrice: salesCell_(values, errCounter, 29, 16),
+    salesYoyRate: salesCell_(values, errCounter, 29, 17),
+    shareRate: salesCell_(values, errCounter, 29, 18)
+  };
+
+  const lastYearTotal = {
+    countsByMonth: readAnnualMonths_(values, errCounter, 33),
+    countTotal: salesCell_(values, errCounter, 33, 15),
+    salesByMonth: readAnnualMonths_(values, errCounter, 34),
+    salesTotal: salesCell_(values, errCounter, 34, 15)
+  };
+
+  const monthlyYoy = {
+    countByMonth: readAnnualMonths_(values, errCounter, 37),
+    countTotal: salesCell_(values, errCounter, 37, 15),
+    salesByMonth: readAnnualMonths_(values, errCounter, 38),
+    salesTotal: salesCell_(values, errCounter, 38, 15)
+  };
+
+  const result = {
+    found: true,
+    sheetName: sheetName,
+    year: year,
+    studioTotal: studioTotal,
+    lastYearTotal: lastYearTotal,
+    monthlyYoy: monthlyYoy,
+    genres: SALES_ANNUAL_GENRE_ROWS_.map(function (r) { return readAnnualGenreBlock_(values, errCounter, r); }),
+    errorCellCount: errCounter.count
+  };
+  return sanitizeForClient_(result);
+}
+
+// ===== 調査用・一時呼び出し(getSales/getAnnual実装の検証用。確認後に削除する) =====
 function inspectSalesSheet_GetSalesTest() {
   const data = getSales(2025, 4);
+  Logger.log(JSON.stringify(data, null, 2));
+}
+function inspectSalesSheet_GetAnnualTest() {
+  const data = getAnnual(2026);
   Logger.log(JSON.stringify(data, null, 2));
 }
