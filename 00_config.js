@@ -23,3 +23,7 @@ const ADULT_GENRE_KEYWORDS = ['成人', '振袖', '二十歳', 'はたち'];
 // migrate() の再実行時に、新環境の既存データ行を消してから流し直すか
 // 通常は false。本番切替時に最新snapshotで流し直すときだけ true にする
 const CLEAR_BEFORE_MIGRATE = false;
+
+// 差分同期(05_sync.js)の読み先: 大本Master_Log(稼働中のもの)のスプレッドシートID
+// スナップショットではない。ここには一切書き込まない(読み取り専用)
+const SOURCE_MASTER_LOG_ID = 'ここに大本Master_LogのIDを貼る';
