@@ -7,7 +7,7 @@
     body {
       margin: 0; padding: 0 0 40px;
       font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
-      background: #faf7f0; color: #2c2a26; font-size: 15px;
+      background: #faf7f0; color: #211f1b; font-size: 16px; line-height: 1.5;
     }
     main { padding: 14px; max-width: 760px; margin: 0 auto; }
 
@@ -18,19 +18,19 @@
       display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 10px;
     }
     .eyebrow {
-      font-size: 11px; letter-spacing: 0.12em; color: #b7ab8e; font-weight: bold; margin-bottom: 4px;
+      font-size: 12px; letter-spacing: 0.12em; color: #8a7f65; font-weight: bold; margin-bottom: 4px;
     }
-    header h1 { font-size: 22px; margin: 0 0 4px; }
-    header .date { font-size: 13px; color: #9a9284; }
+    header h1 { font-size: 23px; margin: 0 0 4px; }
+    header .date { font-size: 14px; color: #6b6356; }
     .head-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
     .pill-ok {
-      display: inline-block; background: #e4f5e8; color: #2f9e58; font-size: 11px;
+      display: inline-block; background: #e4f5e8; color: #1f7a41; font-size: 12px;
       padding: 3px 10px; border-radius: 999px; font-weight: bold;
     }
-    .head-updated { font-size: 11px; color: #a39a89; }
+    .head-updated { font-size: 12px; color: #6b6356; }
     button.reload {
       background: #322d24; color: #fff; border: none; border-radius: 999px;
-      padding: 9px 16px; font-size: 13px; font-weight: bold; cursor: pointer;
+      padding: 9px 16px; font-size: 14px; font-weight: bold; cursor: pointer;
     }
     button.reload:active { opacity: 0.8; }
 
@@ -46,10 +46,10 @@
       cursor: pointer;
     }
     .stat-tile:active { transform: scale(0.98); }
-    .stat-tile .stat-label { font-size: 12px; color: #8c8474; margin-bottom: 2px; }
-    .stat-tile .stat-num { font-size: 26px; font-weight: bold; }
-    .stat-tile .stat-sub { font-size: 11px; color: #a39a89; margin-top: 2px; }
-    .stat-shoots { --accent: #5b9bf0; }
+    .stat-tile .stat-label { font-size: 13px; color: #6b6356; margin-bottom: 2px; }
+    .stat-tile .stat-num { font-size: 27px; font-weight: bold; }
+    .stat-tile .stat-sub { font-size: 12px; color: #857b69; margin-top: 2px; }
+    .stat-shoots { --accent: #4f8ff7; }
     .stat-review { --accent: #f0a83c; }
     .stat-todo   { --accent: #2fb78c; }
     .stat-waiting{ --accent: #a58ee0; }
@@ -60,17 +60,22 @@
       box-shadow: 0 2px 8px rgba(60,50,20,0.05);
     }
     section.card h2 {
-      font-size: 15px; margin: 0 0 10px; display: flex; align-items: center; justify-content: space-between;
+      font-size: 16px; margin: 0 0 10px; display: flex; align-items: center; justify-content: space-between;
     }
+    h3.blocklabel {
+      font-size: 13px; letter-spacing: 0.03em; color: #7a7057; font-weight: bold;
+      margin: 14px 0 8px; display: flex; align-items: center; gap: 6px;
+    }
+    h3.blocklabel:first-of-type { margin-top: 4px; }
     .badge {
       display: inline-block; min-width: 20px; text-align: center;
-      background: #eef0ea; color: #5c6153; border-radius: 999px;
+      background: #eef0ea; color: #4c5145; border-radius: 999px;
       font-size: 12px; padding: 2px 9px; font-weight: bold;
     }
-    .badge.warn { background: #fdecc8; color: #a06a00; }
-    .badge.accent { background: #dcecff; color: #235ea8; }
-    .badge.mint { background: #d9f3e7; color: #157a52; }
-    .badge.violet { background: #ece4fb; color: #5f43a8; }
+    .badge.warn { background: #fdecc8; color: #8a5a00; }
+    .badge.accent { background: #dcecff; color: #1c4f91; }
+    .badge.mint { background: #d9f3e7; color: #0f6a45; }
+    .badge.violet { background: #ece4fb; color: #52389c; }
 
     ul.list { list-style: none; margin: 0; padding: 0; }
     .item-card {
@@ -80,51 +85,92 @@
     .item-card:last-child { margin-bottom: 0; }
     .item-card.clickable { cursor: pointer; }
     .item-card.clickable:active { background: #f4efe2; }
-    .row-main { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 14px; font-weight: bold; }
-    .row-sub { font-size: 12px; color: #8c8474; margin-top: 3px; }
+    .row-main { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; font-size: 15px; font-weight: bold; }
+    .row-sub { font-size: 13px; color: #5c5548; margin-top: 4px; }
     .chip {
-      display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px;
-      background: #eef0ea; color: #5c6153; font-weight: bold; margin-top: 6px; margin-right: 4px;
+      display: inline-block; font-size: 12px; padding: 2px 9px; border-radius: 999px;
+      background: #eef0ea; color: #4c5145; font-weight: bold; margin-right: 4px;
     }
-    .chip.overdue { background: #fbdede; color: #b3372f; }
-    .chip.warn { background: #fdecc8; color: #a06a00; }
-    .empty { color: #b0a794; font-size: 13px; padding: 8px 4px; }
+    .chip.overdue { background: #fbdede; color: #a3271f; }
+    .chip.warn { background: #fdecc8; color: #8a5a00; }
+
+    /* 撮影日からの経過日数バッジ(右上) */
+    .days-badge {
+      display: inline-block; font-size: 12px; padding: 3px 9px; border-radius: 999px;
+      font-weight: bold; white-space: nowrap; flex-shrink: 0;
+    }
+    .days-badge.d-normal { background: #eef0ea; color: #4c5145; }
+    .days-badge.d-amber { background: #fbe3ad; color: #7a4d00; }
+    .days-badge.d-red { background: #f8c9c4; color: #8f2318; }
+
+    .empty { color: #857b69; font-size: 14px; padding: 8px 4px; }
 
     details > summary {
-      cursor: pointer; font-size: 15px; font-weight: bold; padding: 0; list-style: none;
+      cursor: pointer; font-size: 16px; font-weight: bold; padding: 0; list-style: none;
       display: flex; align-items: center; justify-content: space-between;
     }
     details > summary::-webkit-details-marker { display: none; }
-    .arrow::before { content: "▶ "; font-size: 12px; color: #b0a794; }
+    .arrow::before { content: "▶ "; font-size: 12px; color: #857b69; }
     details[open] .arrow::before { content: "▼ "; }
     details .list { margin-top: 10px; }
 
     #detailView.hidden, #todayView.hidden { display: none; }
     .backbtn {
-      background: none; border: none; color: #5b9bf0; font-size: 15px; padding: 4px 0 12px; font-weight: bold;
+      background: none; border: none; color: #2f6fd6; font-size: 16px; padding: 4px 0 12px; font-weight: bold;
       cursor: pointer;
     }
-    .detail-head h1 { font-size: 19px; margin: 0 0 4px; }
-    .detail-head .meta { font-size: 13px; color: #8c8474; }
-    .kv { font-size: 13px; margin: 6px 0; }
-    .kv b { color: #5c5548; }
-    h3.subhead { font-size: 13px; letter-spacing: 0.04em; color: #a39a89; margin: 18px 0 8px; text-transform: uppercase; }
+    .detail-head h1 { font-size: 21px; margin: 0 0 4px; }
+    .detail-head .meta { font-size: 14px; color: #5c5548; }
+    .kv { font-size: 15px; margin: 7px 0; }
+    .kv b { color: #4c453a; }
+    h3.subhead { font-size: 14px; letter-spacing: 0.04em; color: #7a7057; margin: 20px 0 8px; text-transform: uppercase; }
     .order-item {
-      background: #fbf9f4; border: 1px solid #f0ece1; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px;
+      background: #fbf9f4; border: 1px solid #f0ece1; border-radius: 12px; padding: 12px 13px; margin-bottom: 10px;
     }
-    .order-item .status { font-size: 12px; color: #235ea8; font-weight: bold; }
+    .order-item .order-title { font-size: 15px; font-weight: bold; }
+    .order-item .status { font-size: 13px; color: #1c4f91; font-weight: bold; margin-top: 2px; }
     .links a {
-      display: inline-block; margin-right: 10px; font-size: 13px; color: #5b9bf0; font-weight: bold;
+      display: inline-block; margin-right: 10px; font-size: 14px; color: #2f6fd6; font-weight: bold;
     }
     .errbox {
-      background: #fbdede; color: #a3312a; padding: 10px 14px; border-radius: 12px;
-      margin-bottom: 12px; font-size: 13px; white-space: pre-wrap;
+      background: #fbdede; color: #8f231a; padding: 10px 14px; border-radius: 12px;
+      margin-bottom: 12px; font-size: 14px; white-space: pre-wrap;
     }
-    .loading { text-align: center; color: #b0a794; padding: 24px 0; font-size: 13px; }
+    .okbox {
+      background: #e4f5e8; color: #1f7a41; padding: 8px 14px; border-radius: 12px;
+      margin-bottom: 12px; font-size: 14px;
+    }
+    .loading { text-align: center; color: #857b69; padding: 24px 0; font-size: 14px; }
     .footnote {
-      font-size: 12px; color: #b0a794; margin-top: 16px; padding: 10px 12px;
+      font-size: 13px; color: #857b69; margin-top: 16px; padding: 10px 12px;
       background: #f3f0e7; border-radius: 12px;
     }
+
+    /* W2: 状態変更ボタン・編集フォーム */
+    .order-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .order-actions button {
+      background: #2f6fd6; color: #fff; border: none; border-radius: 999px;
+      padding: 8px 14px; font-size: 14px; font-weight: bold; cursor: pointer;
+    }
+    .order-actions button.danger { background: #b3372f; }
+    .order-actions button.neutral { background: #77705f; }
+    .order-actions button:active { opacity: 0.85; }
+    .order-edit {
+      margin-top: 12px; padding-top: 10px; border-top: 1px dashed #e3ddcd;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .order-edit label { font-size: 13px; color: #5c5548; display: block; margin-bottom: 2px; }
+    .order-edit input, .order-edit textarea {
+      width: 100%; font-size: 15px; padding: 7px 9px; border: 1px solid #ddd6c4;
+      border-radius: 8px; font-family: inherit; background: #fff;
+    }
+    .order-edit textarea { min-height: 50px; resize: vertical; }
+    .order-edit .save-row { display: flex; justify-content: flex-end; }
+    .order-edit .save-row button {
+      background: #2fb78c; color: #fff; border: none; border-radius: 999px;
+      padding: 8px 16px; font-size: 14px; font-weight: bold; cursor: pointer;
+    }
+    .order-edit .save-row button:active { opacity: 0.85; }
   </style>
 </head>
 <body>
@@ -177,12 +223,19 @@
 
       <section class="card" id="sec-review" style="display:none">
         <h2>💛 要確認 <span class="badge warn" id="cnt-review">0</span></h2>
-        <ul class="list" id="list-review"></ul>
+        <div id="list-review-other"></div>
+        <h3 class="blocklabel">🎁 プリント・商品(外注)</h3>
+        <ul class="list" id="list-review-goods"></ul>
+        <h3 class="blocklabel">💾 データ(セレクト)</h3>
+        <ul class="list" id="list-review-data"></ul>
       </section>
 
       <section class="card" id="sec-todo" style="display:none">
         <h2>✅ やること <span class="badge mint" id="cnt-todo">0</span></h2>
-        <ul class="list" id="list-todo"></ul>
+        <h3 class="blocklabel">🎁 プリント・商品(外注)</h3>
+        <ul class="list" id="list-todo-goods"></ul>
+        <h3 class="blocklabel">💾 データ(セレクト)</h3>
+        <ul class="list" id="list-todo-data"></ul>
       </section>
 
       <section class="card" id="sec-waiting" style="display:none">
@@ -194,7 +247,7 @@
     </div>
 
     <div id="detailView" class="hidden">
-      <button class="backbtn" onclick="showToday()">← 今日の画面へ戻る</button>
+      <button class="backbtn" onclick="backToToday()">← 今日の画面へ戻る</button>
       <section class="card" id="detailBody"></section>
     </div>
   </main>
@@ -209,6 +262,12 @@
     function showError(msg) {
       document.getElementById('errArea').innerHTML =
         '<div class="errbox">エラー: ' + esc(msg) + '</div>';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    function showOk(msg) {
+      document.getElementById('errArea').innerHTML =
+        '<div class="okbox">' + esc(msg) + '</div>';
+      setTimeout(clearError, 2500);
     }
     function clearError() {
       document.getElementById('errArea').innerHTML = '';
@@ -226,6 +285,10 @@
       document.getElementById('todayView').classList.add('hidden');
       document.getElementById('detailView').classList.remove('hidden');
     }
+    function backToToday() {
+      showToday();
+      loadToday();
+    }
 
     (function initDate() {
       const d = new Date();
@@ -233,6 +296,14 @@
       document.getElementById('dateLine').textContent =
         d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日（' + days[d.getDay()] + '）';
     })();
+
+    // 撮影日からの経過日数バッジ。〜4日=通常 / 5〜7日=琥珀 / 8日以上=赤
+    function daysBadgeHtml_(n) {
+      if (n == null) return '';
+      var cls = 'd-normal';
+      if (n >= 8) cls = 'd-red'; else if (n >= 5) cls = 'd-amber';
+      return '<span class="days-badge ' + cls + '">' + n + '日目</span>';
+    }
 
     function loadToday() {
       clearError();
@@ -278,37 +349,54 @@
       }).join('') + '</ul>';
     }
 
-    function renderReview(items) {
-      const sec = document.getElementById('sec-review');
-      const list = document.getElementById('list-review');
-      document.getElementById('cnt-review').textContent = items.length;
-      sec.style.display = 'block';
-      if (!items.length) {
-        list.innerHTML = '<div class="empty">要確認はありません 🎉</div>';
-        return;
-      }
-      list.innerHTML = items.map(function (it) {
-        const cls = 'item-card' + (it.shootId ? ' clickable' : '');
-        const click = it.shootId ? ' onclick="openShoot(\'' + esc(it.shootId) + '\')"' : '';
-        return '<li class="' + cls + '"' + click + '>' +
-          '<div class="row-main"><span>' + esc(it.label) + '</span>' +
-          '<span class="chip warn">' + labelKind_(it.kind) + '</span></div></li>';
-      }).join('');
+    function reviewItemHtml_(it) {
+      const cls = 'item-card' + (it.shootId ? ' clickable' : '');
+      const click = it.shootId ? ' onclick="openShoot(\'' + esc(it.shootId) + '\')"' : '';
+      return '<li class="' + cls + '"' + click + '>' +
+        '<div class="row-main"><span>' + esc(it.label) + '</span>' + daysBadgeHtml_(it.elapsedDays) + '</div>' +
+        '<div class="row-sub"><span class="chip warn">' + labelKind_(it.kind) + '</span></div></li>';
     }
     function labelKind_(kind) {
       return kind === 'order' ? '注文' : (kind === 'customer' ? '顧客' : '撮影');
     }
 
-    function renderTodo(items) {
-      const sec = document.getElementById('sec-todo');
-      const list = document.getElementById('list-todo');
-      document.getElementById('cnt-todo').textContent = items.length;
-      sec.style.display = 'block';
+    function renderReview(items) {
+      document.getElementById('cnt-review').textContent = items.length;
+      document.getElementById('sec-review').style.display = 'block';
+
+      const other = items.filter(function (i) { return i.category === 'other'; });
+      const goods = items.filter(function (i) { return i.category === 'goods'; });
+      const data = items.filter(function (i) { return i.category === 'data'; });
+
+      document.getElementById('list-review-other').innerHTML = other.length
+        ? '<ul class="list">' + other.map(reviewItemHtml_).join('') + '</ul>' : '';
+      document.getElementById('list-review-goods').innerHTML = goods.length
+        ? '<ul class="list">' + goods.map(reviewItemHtml_).join('') + '</ul>' : '<div class="empty">なし</div>';
+      document.getElementById('list-review-data').innerHTML = data.length
+        ? '<ul class="list">' + data.map(reviewItemHtml_).join('') + '</ul>' : '<div class="empty">なし</div>';
+
       if (!items.length) {
-        list.innerHTML = '<div class="empty">やることはありません 🎉</div>';
-        return;
+        document.getElementById('list-review-goods').innerHTML = '<div class="empty">要確認はありません 🎉</div>';
+        document.getElementById('list-review-data').innerHTML = '';
       }
-      list.innerHTML = items.map(orderItemHtml_).join('');
+    }
+
+    function renderTodo(items) {
+      document.getElementById('cnt-todo').textContent = items.length;
+      document.getElementById('sec-todo').style.display = 'block';
+
+      const goods = items.filter(function (i) { return i.category === 'goods'; });
+      const data = items.filter(function (i) { return i.category === 'data'; });
+
+      document.getElementById('list-todo-goods').innerHTML = goods.length
+        ? goods.map(orderItemHtml_).join('') : '<div class="empty">なし</div>';
+      document.getElementById('list-todo-data').innerHTML = data.length
+        ? data.map(orderItemHtml_).join('') : '<div class="empty">なし</div>';
+
+      if (!items.length) {
+        document.getElementById('list-todo-goods').innerHTML = '<div class="empty">やることはありません 🎉</div>';
+        document.getElementById('list-todo-data').innerHTML = '';
+      }
     }
 
     function renderWaiting(items) {
@@ -329,8 +417,9 @@
       const due = it.dueDate ? ('期限 ' + it.dueDate) : (it.finishDate ? ('仕上がり予定 ' + it.finishDate) : '期限なし');
       return '<li class="item-card clickable" onclick="openShoot(\'' + esc(it.shootId) + '\')">' +
         '<div class="row-main"><span>' + esc(it.orderType) + ' ' + esc(it.customerName) + '様</span>' +
-        '<span class="chip' + (overdue ? ' overdue' : '') + '">' + esc(it.status) + '</span></div>' +
-        '<div class="row-sub">' + esc(due) + (overdue ? ' ・期限超過' : '') + '</div></li>';
+        daysBadgeHtml_(it.elapsedDays) + '</div>' +
+        '<div class="row-sub"><span class="chip' + (overdue ? ' overdue' : '') + '">' + esc(it.status) + '</span> ' +
+        esc(due) + (overdue ? ' ・期限超過' : '') + '</div></li>';
     }
 
     function openShoot(shootId) {
@@ -348,6 +437,7 @@
     }
 
     function renderDetail(d) {
+      window.currentShootId = d.shootId;
       const cust = d.customer;
       const members = d.targetMembers.map(function (m) {
         return esc(m.name) + (m.birth ? '(' + esc(m.birth) + ')' : '');
@@ -361,16 +451,7 @@
         : '<div class="empty">過去の来店はありません</div>';
 
       const orders = d.orders.length
-        ? d.orders.map(function (o) {
-            const due = o.dueDate ? ('期限' + o.dueDate) : (o.finishDate ? ('仕上がり予定' + o.finishDate) : '');
-            return '<div class="order-item">' +
-              '<div>' + esc(o.orderId) + ' ' + esc(o.orderType) + '</div>' +
-              '<div class="status">[' + esc(o.status) + ']</div>' +
-              (due ? '<div class="row-sub">' + esc(due) + '</div>' : '') +
-              (o.owner ? '<div class="row-sub">担当: ' + esc(o.owner) + '</div>' : '') +
-              (o.memo ? '<div class="row-sub">メモ: ' + esc(o.memo) + '</div>' : '') +
-              '</div>';
-          }).join('')
+        ? d.orders.map(orderDetailHtml_).join('')
         : '<div class="empty">注文はありません</div>';
 
       const links = (d.driveUrl ? '<a href="' + esc(d.driveUrl) + '" target="_blank">元データ</a>' : '') +
@@ -390,7 +471,64 @@
         '<h3 class="subhead">注文一覧</h3>' + orders +
         (cust ? '<div class="kv" style="margin-top:12px"><b>連絡先:</b> ' + esc(cust.contact || '(未登録)') +
           ' / <b>住所:</b> ' + esc(cust.addr || '(未登録)') + '</div>' : '') +
-        '<div class="footnote">この画面は閲覧のみです。状態変更・メモ保存はW2以降で追加予定です。</div>';
+        '<div class="footnote">状態変更はEvent_Logに記録されます。「実状態を確定」「セレクト確定」「注文追加」はW3で追加予定です。</div>';
+    }
+
+    function orderDetailHtml_(o) {
+      const due = o.dueDate ? ('期限' + o.dueDate) : (o.finishDate ? ('仕上がり予定' + o.finishDate) : '');
+      const nextButtons = (o.nextStatuses || []).map(function (s) {
+        const label = o.status === '保留' ? ('元の状態(' + s + ')に戻す') : ('→ ' + s);
+        const cls = s === '不要' ? 'danger' : (s === '保留' ? 'neutral' : '');
+        return '<button class="' + cls + '" onclick="doUpdateStatus(\'' + esc(o.orderId) + '\',\'' + esc(s) + '\')">' + esc(label) + '</button>';
+      }).join('');
+
+      return '<div class="order-item" id="order-' + esc(o.orderId) + '">' +
+        '<div class="order-title">' + esc(o.orderId) + ' ' + esc(o.orderType) + '</div>' +
+        '<div class="status">[' + esc(o.status) + ']</div>' +
+        (due ? '<div class="row-sub">' + esc(due) + '</div>' : '') +
+        (o.owner ? '<div class="row-sub">担当: ' + esc(o.owner) + '</div>' : '') +
+        (o.memo ? '<div class="row-sub">メモ: ' + esc(o.memo) + '</div>' : '') +
+        (nextButtons ? '<div class="order-actions">' + nextButtons + '</div>' : '') +
+        '<div class="order-edit">' +
+        '<div><label>担当</label><input type="text" id="f-owner-' + esc(o.orderId) + '" value="' + esc(o.owner) + '"></div>' +
+        '<div><label>期限</label><input type="date" id="f-due-' + esc(o.orderId) + '" value="' + esc(o.dueDate) + '"></div>' +
+        '<div><label>セレクト予定日</label><input type="date" id="f-select-' + esc(o.orderId) + '" value="' + esc(o.selectDate) + '"></div>' +
+        '<div><label>メモ</label><textarea id="f-memo-' + esc(o.orderId) + '">' + esc(o.memo) + '</textarea></div>' +
+        '<div class="save-row"><button onclick="doSaveFields(\'' + esc(o.orderId) + '\')">保存</button></div>' +
+        '</div>' +
+        '</div>';
+    }
+
+    function doUpdateStatus(orderId, to) {
+      clearError();
+      google.script.run
+        .withSuccessHandler(function () {
+          showOk(orderId + ' を「' + to + '」に更新しました。');
+          reopenCurrentShoot_();
+        })
+        .withFailureHandler(function (err) { showError(err.message || err); })
+        .updateStatus(orderId, to);
+    }
+
+    function doSaveFields(orderId) {
+      clearError();
+      const fields = {
+        '担当': document.getElementById('f-owner-' + orderId).value,
+        '期限': document.getElementById('f-due-' + orderId).value,
+        'セレクト予定日': document.getElementById('f-select-' + orderId).value,
+        'メモ': document.getElementById('f-memo-' + orderId).value
+      };
+      google.script.run
+        .withSuccessHandler(function () {
+          showOk(orderId + ' を更新しました。');
+          reopenCurrentShoot_();
+        })
+        .withFailureHandler(function (err) { showError(err.message || err); })
+        .updateOrderFields(orderId, fields);
+    }
+
+    function reopenCurrentShoot_() {
+      if (window.currentShootId) openShoot(window.currentShootId);
     }
 
     loadToday();

@@ -1,8 +1,9 @@
 /**
- * Web Dashboard API — Phase W1(読み取りのみ)
+ * Web Dashboard API — 読み取り専用
  * 設計書: WEB_SPEC_v1.0.md §1.1 / §1.2 / §3
  *
- * このファイルにあるのは読み取りAPIのみ。書き込み(updateStatus等)はW2以降。
+ * このファイルにあるのは読み取りAPIのみ(副作用なし)。
+ * 書き込みAPI(updateStatus/updateOrderFields等)は 11_web_write_api.js。
  */
 
 function doGet() {
@@ -23,15 +24,25 @@ function getToday() {
   const customers = readObjects_(ss, 'Customers');
   const shoots = readObjects_(ss, 'Shoots');
   const orders = readObjects_(ss, 'Orders');
+  const orderCategory = readOrderTypeCategory_(ss);
 
   const customerById = indexBy_(customers, 'customerId');
   const shootById = indexBy_(shoots, 'shootId');
-  const todayStr = isoDate_(new Date());
+  const today = new Date();
+  const todayStr = isoDate_(today);
 
   function customerNameOfShoot_(shootId) {
     const shoot = shootById[shootId];
     const cust = shoot ? customerById[shoot.customerId] : null;
     return cust ? cust.顧客名 : '(不明な顧客)';
+  }
+  // 商品系・作業系は「プリント・商品(外注)」ブロック、データ系は「データ」ブロック
+  function categoryOf_(orderType) {
+    return orderCategory[orderType] === 'データ系' ? 'data' : 'goods';
+  }
+  function elapsedDaysOf_(shoot) {
+    if (!shoot || !(shoot.撮影日 instanceof Date)) return null;
+    return daysBetween_(shoot.撮影日, today) + 1; // 撮影当日を1日目とする
   }
 
   const todo = [];
@@ -41,6 +52,7 @@ function getToday() {
   orders.forEach(function (o) {
     const shoot = shootById[o.shootId] || null;
     const custName = customerNameOfShoot_(o.shootId);
+    const elapsedDays = elapsedDaysOf_(shoot);
     const item = {
       orderId: o.orderId,
       shootId: o.shootId,
@@ -49,12 +61,14 @@ function getToday() {
       status: o.status,
       dueDate: isoDate_(o.期限),
       finishDate: isoDate_(o.仕上がり予定日),
-      shootDate: shoot ? isoDate_(shoot.撮影日) : ''
+      shootDate: shoot ? isoDate_(shoot.撮影日) : '',
+      category: categoryOf_(o.注文種別),
+      elapsedDays: elapsedDays
     };
 
     if (o.status === '要確認') {
       needsReview.push({
-        kind: 'order', shootId: o.shootId,
+        kind: 'order', shootId: o.shootId, category: item.category, elapsedDays: elapsedDays,
         label: custName + '様 実状態を確定する'
       });
     } else if (ACTIVE_ORDER_STATUS_.indexOf(o.status) >= 0) {
@@ -71,7 +85,7 @@ function getToday() {
   shoots.forEach(function (s) {
     if (s.要確認) {
       needsReview.push({
-        kind: 'shoot', shootId: s.shootId,
+        kind: 'shoot', shootId: s.shootId, category: 'other', elapsedDays: elapsedDaysOf_(s),
         label: customerById[s.customerId] ? customerById[s.customerId].顧客名 + '様 撮影情報の確認(' + (s.ジャンル || '') + ')'
           : '撮影情報の確認(' + (s.ジャンル || '') + ')'
       });
@@ -81,13 +95,14 @@ function getToday() {
   customers.forEach(function (c) {
     if (c.要確認) {
       needsReview.push({
-        kind: 'customer', shootId: '',
+        kind: 'customer', shootId: '', category: 'other', elapsedDays: null,
         label: c.顧客名 + '様 同名顧客の確認'
       });
     }
   });
 
-  sortByDue_(todo);
+  sortByElapsedDesc_(todo);
+  sortByElapsedDesc_(needsReview);
   sortByDue_(waiting);
 
   return {
@@ -99,6 +114,17 @@ function getToday() {
   };
 }
 
+// Configの注文種別マスタ(区分=注文種別)から 種別名→系統 を引く
+function readOrderTypeCategory_(ss) {
+  const sh = ss.getSheetByName('Config');
+  const values = sh.getDataRange().getValues();
+  const map = {};
+  for (var r = 1; r < values.length; r++) {
+    if (values[r][0] === '注文種別') map[values[r][1]] = values[r][2];
+  }
+  return map;
+}
+
 function sortByDue_(list) {
   list.sort(function (a, b) {
     if (a.dueDate && b.dueDate) return a.dueDate < b.dueDate ? -1 : (a.dueDate > b.dueDate ? 1 : 0);
@@ -107,6 +133,15 @@ function sortByDue_(list) {
     const sa = a.shootDate || '9999-99-99';
     const sb = b.shootDate || '9999-99-99';
     return sa < sb ? -1 : (sa > sb ? 1 : 0);
+  });
+}
+
+// 経過日数の降順(古い撮影ほど上)。経過日数不明は最後尾。
+function sortByElapsedDesc_(list) {
+  list.sort(function (a, b) {
+    const ea = a.elapsedDays == null ? -1 : a.elapsedDays;
+    const eb = b.elapsedDays == null ? -1 : b.elapsedDays;
+    return eb - ea;
   });
 }
 
@@ -160,7 +195,8 @@ function getShootDetail(shootId) {
       return {
         orderId: o.orderId, orderType: o.注文種別, status: o.status,
         finishDate: isoDate_(o.仕上がり予定日), selectDate: isoDate_(o.セレクト予定日),
-        dueDate: isoDate_(o.期限), owner: o.担当 || '', memo: o.メモ || ''
+        dueDate: isoDate_(o.期限), owner: o.担当 || '', memo: o.メモ || '',
+        nextStatuses: getAllowedNextStatuses_(ss, o.status, o.orderId)
       };
     });
 
@@ -190,8 +226,59 @@ function getShootDetail(shootId) {
   };
 }
 
+// ===== 状態遷移(表示用・読み取りのみ) =====
+// 実際の書き込み(updateStatus)は 11_web_write_api.js。ここでは
+// 「画面にどのボタンを出せるか」を判定するためだけに使う(副作用なし)。
+
+const TERMINAL_ORDER_STATUS_ = ['完了', '完了(移行時推定)', '不要'];
+
+function getAllowedNextStatuses_(ss, fromStatus, orderId) {
+  if (TERMINAL_ORDER_STATUS_.indexOf(fromStatus) >= 0) return [];
+  if (fromStatus === '要確認') return []; // 実状態の確定(resolveReview)はW3
+  if (fromStatus === '保留') {
+    const prev = findPreviousStatusBeforeHold_(ss, orderId);
+    return prev ? [prev] : [];
+  }
+  const forward = (readTransitionTable_(ss)[fromStatus] || []).slice();
+  ['保留', '不要'].forEach(function (s) { if (forward.indexOf(s) < 0) forward.push(s); });
+  return forward;
+}
+
+// Config(区分=遷移)から 現在status→遷移可能なstatus[] を読む。
+// 未設定(setupOrderTransitions()未実行)の場合は空マップを返す(エラーにしない)。
+function readTransitionTable_(ss) {
+  const sh = ss.getSheetByName('Config');
+  const values = sh.getDataRange().getValues();
+  const map = {};
+  for (var r = 1; r < values.length; r++) {
+    if (values[r][0] === '遷移') {
+      const from = values[r][1], to = values[r][2];
+      if (from && to) {
+        if (!map[from]) map[from] = [];
+        map[from].push(to);
+      }
+    }
+  }
+  return map;
+}
+
+// 「保留」に入る直前の状態をEvent_Logから逆引きする(復帰先の判定用)
+function findPreviousStatusBeforeHold_(ss, orderId) {
+  const sh = ss.getSheetByName('Event_Log');
+  const lastRow = sh.getLastRow();
+  if (lastRow < 2) return '';
+  const values = sh.getRange(2, 1, lastRow - 1, 8).getValues();
+  for (var i = values.length - 1; i >= 0; i--) {
+    const row = values[i]; // [eventId,日時,操作者,対象,項目,変更前,変更後,経路]
+    if (row[3] === orderId && row[4] === 'status' && row[6] === '保留' && row[7] === 'Web') {
+      return row[5];
+    }
+  }
+  return '';
+}
+
 // ===== 共通ユーティリティ =====
-// isoDate_ / norm_ 等の日付・文字列ユーティリティは 02_migrate.js のものを共用する。
+// isoDate_ / norm_ / daysBetween_ 等の日付・文字列ユーティリティは 02_migrate.js のものを共用する。
 
 function readObjects_(ss, sheetName) {
   const sh = ss.getSheetByName(sheetName);
