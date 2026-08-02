@@ -171,6 +171,53 @@
       padding: 8px 16px; font-size: 14px; font-weight: bold; cursor: pointer;
     }
     .order-edit .save-row button:active { opacity: 0.85; }
+
+    /* W3: 要確認解消・セレクト確定・注文追加 */
+    .review-resolve {
+      margin-top: 12px; padding: 10px 12px; background: #fdf6e6; border-radius: 12px;
+      border: 1px solid #f0e0ad;
+    }
+    .review-resolve .row-sub { color: #7a5a00; font-weight: bold; }
+    .review-resolve .order-actions button { background: #8a5a00; }
+    .review-resolve .order-actions button.invalid { background: #77705f; }
+
+    .shoot-review-box {
+      margin-bottom: 14px; padding: 12px 14px; background: #fdf6e6; border-radius: 14px;
+      border: 1px solid #f0e0ad; display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; flex-wrap: wrap;
+    }
+    .shoot-review-box .msg { font-size: 15px; color: #7a5a00; font-weight: bold; }
+    .shoot-review-box button {
+      background: #8a5a00; color: #fff; border: none; border-radius: 999px;
+      padding: 8px 14px; font-size: 14px; font-weight: bold; cursor: pointer;
+    }
+
+    .adult-select {
+      margin-top: 12px; padding-top: 10px; border-top: 1px dashed #e3ddcd;
+    }
+    .adult-select .row-sub { margin-bottom: 6px; }
+    .adult-select .radio-row, .adult-select .check-row {
+      display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 8px; font-size: 15px;
+    }
+    .adult-select label { display: flex; align-items: center; gap: 5px; }
+    .adult-select .save-row { display: flex; justify-content: flex-end; }
+    .adult-select .save-row button {
+      background: #52389c; color: #fff; border: none; border-radius: 999px;
+      padding: 8px 16px; font-size: 14px; font-weight: bold; cursor: pointer;
+    }
+
+    .add-order-box {
+      margin-top: 14px; padding: 12px 13px; background: #fbf9f4; border: 1px dashed #ddd6c4;
+      border-radius: 14px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    }
+    .add-order-box select {
+      flex: 1; min-width: 160px; font-size: 15px; padding: 7px 9px; border: 1px solid #ddd6c4;
+      border-radius: 8px; background: #fff; font-family: inherit;
+    }
+    .add-order-box button {
+      background: #2f6fd6; color: #fff; border: none; border-radius: 999px;
+      padding: 8px 16px; font-size: 14px; font-weight: bold; cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -352,9 +399,14 @@
     function reviewItemHtml_(it) {
       const cls = 'item-card' + (it.shootId ? ' clickable' : '');
       const click = it.shootId ? ' onclick="openShoot(\'' + esc(it.shootId) + '\')"' : '';
+      const customerBtn = (it.kind === 'customer' && it.customerId)
+        ? '<div class="order-actions" onclick="event.stopPropagation()">' +
+          '<button class="neutral" onclick="doResolveCustomer(\'' + esc(it.customerId) + '\')">別家族として確認済み</button></div>'
+        : '';
       return '<li class="' + cls + '"' + click + '>' +
         '<div class="row-main"><span>' + esc(it.label) + '</span>' + daysBadgeHtml_(it.elapsedDays) + '</div>' +
-        '<div class="row-sub"><span class="chip warn">' + labelKind_(it.kind) + '</span></div></li>';
+        '<div class="row-sub"><span class="chip warn">' + labelKind_(it.kind) + '</span></div>' +
+        customerBtn + '</li>';
     }
     function labelKind_(kind) {
       return kind === 'order' ? '注文' : (kind === 'customer' ? '顧客' : '撮影');
@@ -457,6 +509,17 @@
       const links = (d.driveUrl ? '<a href="' + esc(d.driveUrl) + '" target="_blank">元データ</a>' : '') +
         (d.albumUrl ? '<a href="' + esc(d.albumUrl) + '" target="_blank">オンラインアルバム</a>' : '');
 
+      const shootReviewBox = d.needsReview
+        ? '<div class="shoot-review-box"><span class="msg">この撮影情報は要確認です</span>' +
+          '<button onclick="doResolveShoot(\'' + esc(d.shootId) + '\')">この内容で確認済みにする</button></div>'
+        : '';
+
+      const addOrderBox = '<div class="add-order-box">' +
+        '<select id="add-order-type">' +
+        (d.orderTypeOptions || []).map(function (t) { return '<option value="' + esc(t) + '">' + esc(t) + '</option>'; }).join('') +
+        '</select>' +
+        '<button onclick="doAddOrder(\'' + esc(d.shootId) + '\')">+ 注文を追加</button></div>';
+
       document.getElementById('detailBody').innerHTML =
         '<div class="detail-head">' +
         '<h1>' + esc(cust ? cust.name : '(不明な顧客)') + '様' +
@@ -464,14 +527,15 @@
         (d.needsReview ? ' <span class="chip warn">要確認</span>' : '') + '</h1>' +
         '<div class="meta">' + esc(d.genre) + ' ' + esc(d.date) + ' / HP掲載: ' + esc(d.hp) + '</div>' +
         '</div>' +
+        shootReviewBox +
         '<div class="kv"><b>家族:</b> ' + members + '</div>' +
         (d.remarks ? '<div class="kv"><b>備考:</b> ' + esc(d.remarks) + '</div>' : '') +
         (links ? '<div class="kv links">' + links + '</div>' : '') +
         '<h3 class="subhead">過去の来店</h3>' + past +
-        '<h3 class="subhead">注文一覧</h3>' + orders +
+        '<h3 class="subhead">注文一覧</h3>' + orders + addOrderBox +
         (cust ? '<div class="kv" style="margin-top:12px"><b>連絡先:</b> ' + esc(cust.contact || '(未登録)') +
           ' / <b>住所:</b> ' + esc(cust.addr || '(未登録)') + '</div>' : '') +
-        '<div class="footnote">状態変更はEvent_Logに記録されます。「実状態を確定」「セレクト確定」「注文追加」はW3で追加予定です。</div>';
+        '<div class="footnote">状態変更・要確認の解消・注文追加はすべてEvent_Logに記録されます。</div>';
     }
 
     function orderDetailHtml_(o) {
@@ -482,6 +546,36 @@
         return '<button class="' + cls + '" onclick="doUpdateStatus(\'' + esc(o.orderId) + '\',\'' + esc(s) + '\')">' + esc(label) + '</button>';
       }).join('');
 
+      // W3: 要確認の「実状態を確定」(通常の遷移制限とは別扱いで、系統内の全statusから選べる)
+      const reviewBlock = (o.status === '要確認' && (o.reviewOptions || []).length)
+        ? '<div class="review-resolve">' +
+          '<div class="row-sub">実際の状態を選んでください</div>' +
+          '<div class="order-actions">' +
+          o.reviewOptions.map(function (s) {
+            return '<button onclick="doResolveOrder(\'' + esc(o.orderId) + '\',\'' + esc(s) + '\')">' + esc(s) + 'にする</button>';
+          }).join('') +
+          '<button class="invalid" onclick="doInvalidateOrder(\'' + esc(o.orderId) + '\')">この案件は無効(不要にする)</button>' +
+          '</div></div>'
+        : '';
+
+      // W3: 成人セレクト確定(成人商品(セレクト前)のみ)
+      const adultBlock = (o.orderType === '成人商品(セレクト前)')
+        ? '<div class="adult-select">' +
+          '<div class="row-sub">セレクト確定</div>' +
+          '<div class="radio-row">' +
+          ['白台紙', '雅', 'ローズ'].map(function (p) {
+            return '<label><input type="radio" name="adult-product-' + esc(o.orderId) + '" value="' + esc(p) + '">' + esc(p) + '</label>';
+          }).join('') +
+          '</div>' +
+          '<div class="check-row">' +
+          ['全カット美肌補正', '全データ'].map(function (opt) {
+            return '<label><input type="checkbox" class="adult-opt-' + esc(o.orderId) + '" value="' + esc(opt) + '">' + esc(opt) + '</label>';
+          }).join('') +
+          '</div>' +
+          '<div class="save-row"><button onclick="doConfirmAdultSelect(\'' + esc(o.orderId) + '\')">セレクトを確定する</button></div>' +
+          '</div>'
+        : '';
+
       return '<div class="order-item" id="order-' + esc(o.orderId) + '">' +
         '<div class="order-title">' + esc(o.orderId) + ' ' + esc(o.orderType) + '</div>' +
         '<div class="status">[' + esc(o.status) + ']</div>' +
@@ -489,6 +583,7 @@
         (o.owner ? '<div class="row-sub">担当: ' + esc(o.owner) + '</div>' : '') +
         (o.memo ? '<div class="row-sub">メモ: ' + esc(o.memo) + '</div>' : '') +
         (nextButtons ? '<div class="order-actions">' + nextButtons + '</div>' : '') +
+        reviewBlock + adultBlock +
         '<div class="order-edit">' +
         '<div><label>担当</label><input type="text" id="f-owner-' + esc(o.orderId) + '" value="' + esc(o.owner) + '"></div>' +
         '<div><label>期限</label><input type="date" id="f-due-' + esc(o.orderId) + '" value="' + esc(o.dueDate) + '"></div>' +
@@ -529,6 +624,90 @@
 
     function reopenCurrentShoot_() {
       if (window.currentShootId) openShoot(window.currentShootId);
+    }
+
+    // ===== W3: 要確認解消 =====
+
+    function doResolveOrder(orderId, status) {
+      clearError();
+      google.script.run
+        .withSuccessHandler(function () {
+          showOk(orderId + ' を「' + status + '」で確定しました。');
+          reopenCurrentShoot_();
+        })
+        .withFailureHandler(function (err) { showError(err.message || err); })
+        .resolveReview('order', orderId, { status: status });
+    }
+
+    function doInvalidateOrder(orderId) {
+      clearError();
+      google.script.run
+        .withSuccessHandler(function () {
+          showOk(orderId + ' を無効(不要)にしました。');
+          reopenCurrentShoot_();
+        })
+        .withFailureHandler(function (err) { showError(err.message || err); })
+        .resolveReview('order', orderId, { invalid: true });
+    }
+
+    function doResolveShoot(shootId) {
+      clearError();
+      google.script.run
+        .withSuccessHandler(function () {
+          showOk('撮影情報を確認済みにしました。');
+          reopenCurrentShoot_();
+        })
+        .withFailureHandler(function (err) { showError(err.message || err); })
+        .resolveReview('shoot', shootId, {});
+    }
+
+    function doResolveCustomer(customerId) {
+      clearError();
+      google.script.run
+        .withSuccessHandler(function () {
+          showOk('顧客を別家族として確認済みにしました。');
+          loadToday();
+        })
+        .withFailureHandler(function (err) { showError(err.message || err); })
+        .resolveReview('customer', customerId, {});
+    }
+
+    // ===== W3: 成人セレクト確定 =====
+
+    function doConfirmAdultSelect(orderId) {
+      clearError();
+      const radios = document.getElementsByName('adult-product-' + orderId);
+      var product = '';
+      for (var i = 0; i < radios.length; i++) {
+        if (radios[i].checked) product = radios[i].value;
+      }
+      if (!product) { showError('白台紙・雅・ローズのいずれかを選んでください。'); return; }
+
+      const checks = document.querySelectorAll('.adult-opt-' + orderId);
+      const options = [];
+      checks.forEach(function (c) { if (c.checked) options.push(c.value); });
+
+      google.script.run
+        .withSuccessHandler(function () {
+          showOk(orderId + ' のセレクトを確定しました。');
+          reopenCurrentShoot_();
+        })
+        .withFailureHandler(function (err) { showError(err.message || err); })
+        .confirmAdultSelect(orderId, product, options);
+    }
+
+    // ===== W3: 注文追加 =====
+
+    function doAddOrder(shootId) {
+      clearError();
+      const type = document.getElementById('add-order-type').value;
+      google.script.run
+        .withSuccessHandler(function () {
+          showOk('注文を追加しました。');
+          reopenCurrentShoot_();
+        })
+        .withFailureHandler(function (err) { showError(err.message || err); })
+        .addOrder(shootId, type);
     }
 
     loadToday();

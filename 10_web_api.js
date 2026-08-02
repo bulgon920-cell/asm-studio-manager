@@ -95,7 +95,7 @@ function getToday() {
   customers.forEach(function (c) {
     if (c.要確認) {
       needsReview.push({
-        kind: 'customer', shootId: '', category: 'other', elapsedDays: null,
+        kind: 'customer', shootId: '', customerId: c.customerId, category: 'other', elapsedDays: null,
         label: c.顧客名 + '様 同名顧客の確認'
       });
     }
@@ -196,7 +196,9 @@ function getShootDetail(shootId) {
         orderId: o.orderId, orderType: o.注文種別, status: o.status,
         finishDate: isoDate_(o.仕上がり予定日), selectDate: isoDate_(o.セレクト予定日),
         dueDate: isoDate_(o.期限), owner: o.担当 || '', memo: o.メモ || '',
-        nextStatuses: getAllowedNextStatuses_(ss, o.status, o.orderId)
+        nextStatuses: getAllowedNextStatuses_(ss, o.status, o.orderId),
+        // 要確認の「実状態を確定」用。通常の遷移制限とは別に、系統内の全statusを出す(W3)。
+        reviewOptions: o.status === '要確認' ? getReviewStatusOptions_(ss, o.注文種別) : []
       };
     });
 
@@ -222,7 +224,9 @@ function getShootDetail(shootId) {
     } : null,
     targetMembers: targetMembers,
     pastShoots: pastShoots,
-    orders: orders
+    orders: orders,
+    // 「+ 注文を追加」のドロップダウン用(W3)
+    orderTypeOptions: Object.keys(readOrderTypeCategory_(ss))
   };
 }
 
