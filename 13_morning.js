@@ -206,18 +206,37 @@ function buildMatches_(ss, todayRows) {
 
 // ===== Today_Shoots / Today_Shoot_Matches / Today_Task_Board の再生成 =====
 
+// 列定義はこの1箇所のみ。書き込み側(regenerateTodayShootsSheet_)はこの配列の順序で
+// 行を組み立て、読み込み側(10_web_api.jsのreadTodayShoots_)はヘッダー名から列を引く
+// (readObjects_)。ヘッダー行と中身が別々に列位置を知っている状態を作らないための対策。
 const TODAY_SHOOTS_HEADERS_ = [
   'id', 'eventId', '時刻', 'allDay', 'category', 'ジャンル', '姓', '人数',
   '年齢性別', '自由メモ', '電話番号', 'タイトル', '日付'
 ];
-const TODAY_SHOOTS_TIME_COL_ = 3; // '時刻'列(1始まり)。Sheetsが時刻文字列を自動変換しないようテキスト書式にする
+
+// row(buildTodayShootRow_が返すオブジェクト)→ TODAY_SHOOTS_HEADERS_の順に並んだ配列
+function todayShootRowToArray_(r) {
+  const fieldByHeader = {
+    id: r.id, eventId: r.eventId, 時刻: r.time, allDay: r.allDay, category: r.category,
+    ジャンル: r.genre, 姓: r.lastName, 人数: r.people, 年齢性別: r.ageGender,
+    自由メモ: r.memo, 電話番号: r.phone, タイトル: r.title, 日付: r.dateIso
+  };
+  return TODAY_SHOOTS_HEADERS_.map(function (h) { return fieldByHeader[h]; });
+}
 
 function getOrCreateTodayShootsSheet_(ss) {
   var sh = ss.getSheetByName('Today_Shoots');
-  if (sh) return sh;
-  sh = ss.insertSheet('Today_Shoots');
+  if (!sh) {
+    sh = ss.insertSheet('Today_Shoots');
+    sh.setFrozenRows(1);
+  }
+  // 再生成のたびに見出し行も書き直す(派生ビューなので安全。列を増やしても
+  // 見出しと中身が絶対にずれない)。
   sh.getRange(1, 1, 1, TODAY_SHOOTS_HEADERS_.length).setValues([TODAY_SHOOTS_HEADERS_]).setFontWeight('bold');
-  sh.setFrozenRows(1);
+  const maxCols = sh.getMaxColumns();
+  if (maxCols > TODAY_SHOOTS_HEADERS_.length) {
+    sh.getRange(1, TODAY_SHOOTS_HEADERS_.length + 1, 1, maxCols - TODAY_SHOOTS_HEADERS_.length).clearContent();
+  }
   return sh;
 }
 
@@ -228,22 +247,33 @@ function regenerateTodayShootsSheet_(ss, rows) {
   if (!rows.length) return;
   // 時刻列は「15:00」のような文字列をSheetsが時刻値へ自動変換してしまうことがあるため、
   // 書き込み前にテキスト書式を明示する(読み出し時にDate化されるのを防ぐ)。
-  sh.getRange(2, TODAY_SHOOTS_TIME_COL_, rows.length, 1).setNumberFormat('@');
-  const values = rows.map(function (r) {
-    return [r.id, r.eventId, r.time, r.allDay, r.category, r.genre, r.lastName,
-      r.people, r.ageGender, r.memo, r.phone, r.title, r.dateIso];
-  });
+  const timeCol = TODAY_SHOOTS_HEADERS_.indexOf('時刻') + 1;
+  sh.getRange(2, timeCol, rows.length, 1).setNumberFormat('@');
+  const values = rows.map(todayShootRowToArray_);
   sh.getRange(2, 1, values.length, values[0].length).setValues(values);
 }
 
 const TODAY_MATCHES_HEADERS_ = ['todayShootId', 'customerId', '顧客名', '一致理由', '直近shootId'];
 
+function todayMatchRowToArray_(m) {
+  const fieldByHeader = {
+    todayShootId: m.todayShootId, customerId: m.customerId, 顧客名: m.customerName,
+    一致理由: m.reason, 直近shootId: m.lastShootId || ''
+  };
+  return TODAY_MATCHES_HEADERS_.map(function (h) { return fieldByHeader[h]; });
+}
+
 function getOrCreateTodayMatchesSheet_(ss) {
   var sh = ss.getSheetByName('Today_Shoot_Matches');
-  if (sh) return sh;
-  sh = ss.insertSheet('Today_Shoot_Matches');
+  if (!sh) {
+    sh = ss.insertSheet('Today_Shoot_Matches');
+    sh.setFrozenRows(1);
+  }
   sh.getRange(1, 1, 1, TODAY_MATCHES_HEADERS_.length).setValues([TODAY_MATCHES_HEADERS_]).setFontWeight('bold');
-  sh.setFrozenRows(1);
+  const maxCols = sh.getMaxColumns();
+  if (maxCols > TODAY_MATCHES_HEADERS_.length) {
+    sh.getRange(1, TODAY_MATCHES_HEADERS_.length + 1, 1, maxCols - TODAY_MATCHES_HEADERS_.length).clearContent();
+  }
   return sh;
 }
 
@@ -252,19 +282,28 @@ function regenerateTodayShootMatchesSheet_(ss, matches) {
   const lastRow = sh.getLastRow();
   if (lastRow > 1) sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).clearContent();
   if (!matches.length) return;
-  const values = matches.map(function (m) {
-    return [m.todayShootId, m.customerId, m.customerName, m.reason, m.lastShootId || ''];
-  });
+  const values = matches.map(todayMatchRowToArray_);
   sh.getRange(2, 1, values.length, values[0].length).setValues(values);
 }
 
 // Today_Task_Board再生成(設計書_v1.0.md §2.7)
 const TASK_BOARD_ACTIVE_STATUS_ = ['データ納品待ち', '店頭セレクト待ち', '発注待ち', '納品連絡待ち', '引渡し待ち'];
+const TASK_BOARD_HEADERS_ = ['種別', '対象ID', '顧客名', '内容', '次の行動', '期限', '担当', 'status'];
+
+function taskBoardRowToArray_(r) {
+  const fieldByHeader = {
+    種別: r.kind, 対象ID: r.targetId, 顧客名: r.customerName, 内容: r.content,
+    次の行動: r.nextAction, 期限: r.due, 担当: r.owner, status: r.status
+  };
+  return TASK_BOARD_HEADERS_.map(function (h) { return fieldByHeader[h]; });
+}
 
 function regenerateTodayTaskBoard_(ss) {
   const sh = ss.getSheetByName('Today_Task_Board');
   if (!sh) return; // ビューが無くても致命的にはしない
 
+  // 再生成のたびに見出し行も書き直す(他の派生ビューと同じ一元化)。
+  sh.getRange(1, 1, 1, TASK_BOARD_HEADERS_.length).setValues([TASK_BOARD_HEADERS_]).setFontWeight('bold');
   const lastRow = sh.getLastRow();
   if (lastRow > 1) sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).clearContent();
 
@@ -281,25 +320,38 @@ function regenerateTodayTaskBoard_(ss) {
     if (TASK_BOARD_ACTIVE_STATUS_.indexOf(o.status) < 0) return;
     const shoot = shootById[o.shootId];
     const cust = shoot ? custById[shoot.customerId] : null;
-    rows.push(['注文', o.orderId, cust ? cust.顧客名 : '', o.注文種別,
-      actionText[o.status] || '', o.期限 ? isoDate_(o.期限) : '', o.担当 || '', o.status]);
+    rows.push({
+      kind: '注文', targetId: o.orderId, customerName: cust ? cust.顧客名 : '', content: o.注文種別,
+      nextAction: actionText[o.status] || '', due: o.期限 ? isoDate_(o.期限) : '', owner: o.担当 || '', status: o.status
+    });
   });
   shoots.forEach(function (s) {
     if (!(s.撮影日 instanceof Date) || isoDate_(s.撮影日) !== todayStr) return;
     const cust = custById[s.customerId];
-    rows.push(['本日撮影', s.shootId, cust ? cust.顧客名 : '', s.ジャンル || '', '', '', '', '']);
+    rows.push({
+      kind: '本日撮影', targetId: s.shootId, customerName: cust ? cust.顧客名 : '', content: s.ジャンル || '',
+      nextAction: '', due: '', owner: '', status: ''
+    });
   });
   shoots.forEach(function (s) {
     if (!s.要確認) return;
     const cust = custById[s.customerId];
-    rows.push(['要確認(撮影)', s.shootId, cust ? cust.顧客名 : '', s.ジャンル || '', '内容を確認する', '', '', '要確認']);
+    rows.push({
+      kind: '要確認(撮影)', targetId: s.shootId, customerName: cust ? cust.顧客名 : '', content: s.ジャンル || '',
+      nextAction: '内容を確認する', due: '', owner: '', status: '要確認'
+    });
   });
   customers.forEach(function (c) {
     if (!c.要確認) return;
-    rows.push(['要確認(顧客)', c.customerId, c.顧客名, '', '内容を確認する', '', '', '要確認']);
+    rows.push({
+      kind: '要確認(顧客)', targetId: c.customerId, customerName: c.顧客名, content: '',
+      nextAction: '内容を確認する', due: '', owner: '', status: '要確認'
+    });
   });
 
-  if (rows.length) sh.getRange(2, 1, rows.length, 8).setValues(rows);
+  if (rows.length) {
+    sh.getRange(2, 1, rows.length, TASK_BOARD_HEADERS_.length).setValues(rows.map(taskBoardRowToArray_));
+  }
 }
 
 function readNextActionMap_(ss) {

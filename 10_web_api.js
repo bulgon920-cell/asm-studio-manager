@@ -20,6 +20,19 @@ function sanitizeForClient_(payload) {
   return JSON.parse(JSON.stringify(payload));
 }
 
+// スクリプトエディタから直接実行して getToday() の中身を確認するための手動テスト用関数。
+// Webアプリを経由せずに、今日の予定・要確認・やること・待ちの件数と内容をログへ出す。
+function testGetToday() {
+  const result = getToday();
+  Logger.log('=== getToday() 結果 ===');
+  Logger.log('todayShoots: %s件', result.todayShoots.length);
+  Logger.log(JSON.stringify(result.todayShoots, null, 2));
+  Logger.log('needsReview: %s件 / todo: %s件 / waiting: %s件 / hiddenEvents: %s件',
+    result.needsReview.length, result.todo.length, result.waiting.length,
+    (result.hiddenEvents || []).length);
+  if (result.morningError) Logger.log('morningError: ' + result.morningError);
+}
+
 // ===== 今日の画面 =====
 
 const ACTIVE_ORDER_STATUS_ = [
