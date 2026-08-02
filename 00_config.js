@@ -36,3 +36,7 @@ const SOURCE_MASTER_LOG_SHEET_NAME = 'Master_Log';
 // カレンダーに付けた表示名で、実際のカレンダーID(カレンダー設定→カレンダーの統合で確認)は
 // 本人のアドレスと同じ bulgon920@gmail.com。2026-08-02に実機確認して修正(WEB_SPEC §8も修正)。
 const CALENDAR_ID = 'bulgon920@gmail.com';
+
+// 売上タブ(15_sales.js)の読み先: 現行「スタジオデイズ顧客名簿&月毎売上」の
+// スプレッドシートID。ここには一切書き込まない(読み取り専用)。値はユーザーが入れる。
+const SALES_SOURCE_ID = 'ここに現行売上シートのIDを貼る';
