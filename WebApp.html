@@ -275,6 +275,32 @@
       padding: 7px 14px; font-size: 13px; font-weight: bold; cursor: pointer;
     }
     .lifecycle-item .contact-btn:active { opacity: 0.85; }
+
+    /* 売上タブ */
+    .sales-subtabbar { margin-bottom: 14px; }
+    .sales-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .sales-nav button {
+      background: #77705f; color: #fff; border: none; border-radius: 999px;
+      padding: 7px 14px; font-size: 14px; font-weight: bold; cursor: pointer;
+    }
+    .sales-nav button:active { opacity: 0.85; }
+    .sales-nav .label { font-size: 17px; font-weight: bold; }
+    .sales-summary {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 10px; margin-bottom: 16px;
+    }
+    .sales-summary .tile {
+      background: #fbf9f4; border-radius: 12px; padding: 10px 12px; border: 1px solid #f0ece1;
+    }
+    .sales-summary .tile .label { font-size: 12px; color: #7a7057; }
+    .sales-summary .tile .value { font-size: 18px; font-weight: bold; margin-top: 2px; }
+    .sales-table-wrap { overflow-x: auto; }
+    table.sales-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table.sales-table th, table.sales-table td {
+      padding: 6px 8px; text-align: right; border-bottom: 1px solid #f0ece1; white-space: nowrap;
+    }
+    table.sales-table th:first-child, table.sales-table td:first-child { text-align: left; }
+    table.sales-table thead th { color: #7a7057; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -300,6 +326,7 @@
     <div class="tabbar">
       <button class="tab-btn active" id="tabToday" onclick="switchTab_('today')">📅 今日</button>
       <button class="tab-btn" id="tabLifecycle" onclick="switchTab_('lifecycle')">🎂 節目</button>
+      <button class="tab-btn" id="tabSales" onclick="switchTab_('sales')">💰 売上</button>
     </div>
 
     <div id="todayView">
@@ -377,6 +404,82 @@
       </section>
     </div>
 
+    <div id="salesView" class="hidden">
+      <div class="tabbar sales-subtabbar">
+        <button class="tab-btn active" id="salesSubTabMonthly" onclick="switchSalesSubTab_('monthly')">📆 月次</button>
+        <button class="tab-btn" id="salesSubTabAnnual" onclick="switchSalesSubTab_('annual')">📊 年次</button>
+      </div>
+
+      <div id="salesMonthlyView">
+        <div id="loadingSalesMonthly" class="loading">読み込み中…</div>
+        <section class="card" id="sec-sales-monthly" style="display:none">
+          <div class="sales-nav">
+            <button onclick="salesMonthNav_(-1)">← 前月</button>
+            <span class="label" id="sales-monthly-label"></span>
+            <button onclick="salesMonthNav_(1)">翌月 →</button>
+          </div>
+          <div id="sales-monthly-notfound" class="empty" style="display:none"></div>
+          <div id="sales-monthly-body" style="display:none">
+            <div class="sales-summary" id="sales-monthly-summary"></div>
+            <h3 class="blocklabel">🎞 ジャンル別</h3>
+            <div class="sales-table-wrap">
+              <table class="sales-table" id="sales-genre-table"></table>
+            </div>
+            <details style="margin-top:12px">
+              <summary><span class="arrow">旬別内訳(単月売上)</span></summary>
+              <div class="sales-table-wrap">
+                <table class="sales-table" id="sales-decade-table"></table>
+              </div>
+            </details>
+            <details style="margin-top:10px">
+              <summary><span class="arrow">業務(葬儀・学校)</span></summary>
+              <div class="sales-table-wrap">
+                <table class="sales-table" id="sales-business-table"></table>
+              </div>
+            </details>
+            <div class="footnote" id="sales-monthly-errnote" style="display:none"></div>
+          </div>
+        </section>
+      </div>
+
+      <div id="salesAnnualView" class="hidden">
+        <div id="loadingSalesAnnual" class="loading">読み込み中…</div>
+        <section class="card" id="sec-sales-annual" style="display:none">
+          <div class="sales-nav">
+            <button onclick="salesYearNav_(-1)">← 前年</button>
+            <span class="label" id="sales-annual-label"></span>
+            <button onclick="salesYearNav_(1)">翌年 →</button>
+          </div>
+          <div id="sales-annual-notfound" class="empty" style="display:none"></div>
+          <div id="sales-annual-body" style="display:none">
+            <div class="tabbar sales-subtabbar">
+              <button class="tab-btn active" id="salesAnnualSubMatrix" onclick="switchSalesAnnualSub_('matrix')">🎞 ジャンル×月</button>
+              <button class="tab-btn" id="salesAnnualSubYoy" onclick="switchSalesAnnualSub_('yoy')">📈 前年比較</button>
+            </div>
+            <div id="sales-annual-matrix">
+              <h3 class="blocklabel">売上(円)</h3>
+              <div class="sales-table-wrap">
+                <table class="sales-table" id="sales-annual-sales-table"></table>
+              </div>
+              <details style="margin-top:12px">
+                <summary><span class="arrow">撮影件数</span></summary>
+                <div class="sales-table-wrap">
+                  <table class="sales-table" id="sales-annual-count-table"></table>
+                </div>
+              </details>
+            </div>
+            <div id="sales-annual-yoy" class="hidden">
+              <h3 class="blocklabel">スタジオ合計 前年比較(月別)</h3>
+              <div class="sales-table-wrap">
+                <table class="sales-table" id="sales-annual-yoy-table"></table>
+              </div>
+            </div>
+            <div class="footnote" id="sales-annual-errnote" style="display:none"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+
     <div id="detailView" class="hidden">
       <button class="backbtn" onclick="backToToday()">← 今日の画面へ戻る</button>
       <section class="card" id="detailBody"></section>
@@ -410,29 +513,40 @@
 
     var currentTab_ = 'today';
     var lifecycleLoaded_ = false;
+    var salesInited_ = false;
 
     function switchTab_(tab) {
       currentTab_ = tab;
       document.getElementById('tabToday').classList.toggle('active', tab === 'today');
       document.getElementById('tabLifecycle').classList.toggle('active', tab === 'lifecycle');
+      document.getElementById('tabSales').classList.toggle('active', tab === 'sales');
       document.getElementById('todayView').classList.toggle('hidden', tab !== 'today');
       document.getElementById('lifecycleView').classList.toggle('hidden', tab !== 'lifecycle');
+      document.getElementById('salesView').classList.toggle('hidden', tab !== 'sales');
       document.getElementById('detailView').classList.add('hidden');
       if (tab === 'lifecycle' && !lifecycleLoaded_) loadLifecycle();
+      if (tab === 'sales' && !salesInited_) {
+        salesInited_ = true;
+        loadSalesMonthly();
+        loadSalesAnnual();
+      }
     }
 
     function showToday() {
       document.getElementById('detailView').classList.add('hidden');
-      document.getElementById(currentTab_ === 'lifecycle' ? 'lifecycleView' : 'todayView').classList.remove('hidden');
+      var id = currentTab_ === 'lifecycle' ? 'lifecycleView' : (currentTab_ === 'sales' ? 'salesView' : 'todayView');
+      document.getElementById(id).classList.remove('hidden');
     }
     function showDetail() {
       document.getElementById('todayView').classList.add('hidden');
       document.getElementById('lifecycleView').classList.add('hidden');
+      document.getElementById('salesView').classList.add('hidden');
       document.getElementById('detailView').classList.remove('hidden');
     }
     function backToToday() {
       showToday();
-      if (currentTab_ === 'lifecycle') loadLifecycle(); else loadToday();
+      if (currentTab_ === 'lifecycle') loadLifecycle();
+      else if (currentTab_ !== 'sales') loadToday();
     }
 
     (function initDate() {
@@ -1040,6 +1154,216 @@
         .withSuccessHandler(function () { showOk('案内済みにしました。'); loadLifecycle(); })
         .withFailureHandler(function (err) { showError(err.message || err); })
         .markContacted(memberId, milestoneName, targetYear);
+    }
+
+    // ===== 売上タブ(現行シート読み取り表示。再計算はしない) =====
+
+    var salesYear_ = 0, salesMonth_ = 0, salesAnnualYear_ = 0;
+    (function initSalesDate() {
+      const d = new Date();
+      salesYear_ = d.getFullYear();
+      salesMonth_ = d.getMonth() + 1;
+      salesAnnualYear_ = d.getFullYear();
+    })();
+
+    function switchSalesSubTab_(sub) {
+      document.getElementById('salesSubTabMonthly').classList.toggle('active', sub === 'monthly');
+      document.getElementById('salesSubTabAnnual').classList.toggle('active', sub === 'annual');
+      document.getElementById('salesMonthlyView').classList.toggle('hidden', sub !== 'monthly');
+      document.getElementById('salesAnnualView').classList.toggle('hidden', sub !== 'annual');
+    }
+
+    function switchSalesAnnualSub_(sub) {
+      document.getElementById('salesAnnualSubMatrix').classList.toggle('active', sub === 'matrix');
+      document.getElementById('salesAnnualSubYoy').classList.toggle('active', sub === 'yoy');
+      document.getElementById('sales-annual-matrix').classList.toggle('hidden', sub !== 'matrix');
+      document.getElementById('sales-annual-yoy').classList.toggle('hidden', sub !== 'yoy');
+    }
+
+    function salesMonthNav_(delta) {
+      salesMonth_ += delta;
+      if (salesMonth_ < 1) { salesMonth_ = 12; salesYear_--; }
+      if (salesMonth_ > 12) { salesMonth_ = 1; salesYear_++; }
+      loadSalesMonthly();
+    }
+
+    function salesYearNav_(delta) {
+      salesAnnualYear_ += delta;
+      loadSalesAnnual();
+    }
+
+    function salesTileHtml_(label, value) {
+      return '<div class="tile"><div class="label">' + esc(label) + '</div>' +
+        '<div class="value">' + esc(value) + '</div></div>';
+    }
+
+    function salesGenreTableHtml_(list) {
+      const rows = list.map(function (g) {
+        return '<tr><td>' + esc(g.genre) + '</td>' +
+          '<td>' + esc(g.monthAmount) + '</td>' +
+          '<td>' + esc(g.targetAmount) + '</td>' +
+          '<td>' + esc(g.lastYearAmount) + '</td>' +
+          '<td>' + esc(g.achieveRate) + '</td>' +
+          '<td>' + esc(g.yoyRate) + '</td>' +
+          '<td>' + esc(g.monthCount) + '</td>' +
+          '<td>' + esc(g.targetPrice) + '</td></tr>';
+      }).join('');
+      return '<thead><tr><th>ジャンル</th><th>単月売上</th><th>目標</th><th>前年</th>' +
+        '<th>達成率</th><th>前年比</th><th>件数</th><th>目標単価</th></tr></thead><tbody>' + rows + '</tbody>';
+    }
+
+    function salesDecadeTableHtml_(list) {
+      const rows = list.map(function (g) {
+        const d = g.monthAmountByDecade || ['', '', ''];
+        return '<tr><td>' + esc(g.genre) + '</td><td>' + esc(d[0]) + '</td><td>' + esc(d[1]) + '</td><td>' + esc(d[2]) + '</td></tr>';
+      }).join('');
+      return '<thead><tr><th>ジャンル</th><th>1〜10日</th><th>11〜20日</th><th>21日〜末</th></tr></thead><tbody>' + rows + '</tbody>';
+    }
+
+    function loadSalesMonthly() {
+      clearError();
+      document.getElementById('loadingSalesMonthly').style.display = 'block';
+      document.getElementById('sec-sales-monthly').style.display = 'none';
+      google.script.run
+        .withSuccessHandler(function (data) {
+          try {
+            renderSalesMonthly(data);
+          } catch (e) {
+            document.getElementById('loadingSalesMonthly').style.display = 'none';
+            showError('画面の描画でエラーが発生しました: ' + (e && e.message ? e.message : e));
+          }
+        })
+        .withFailureHandler(function (err) {
+          document.getElementById('loadingSalesMonthly').style.display = 'none';
+          showError(err.message || err);
+        })
+        .getSales(salesYear_, salesMonth_);
+    }
+
+    function renderSalesMonthly(data) {
+      document.getElementById('loadingSalesMonthly').style.display = 'none';
+      document.getElementById('sec-sales-monthly').style.display = 'block';
+      if (!data) {
+        showError('サーバーから空の応答が返りました。ブラウザの拡張機能(広告ブロッカー等)が' +
+          '通信を妨げている可能性があります。');
+        return;
+      }
+      document.getElementById('sales-monthly-label').textContent = data.year + '年' + data.month + '月';
+
+      const body = document.getElementById('sales-monthly-body');
+      const notfound = document.getElementById('sales-monthly-notfound');
+      if (!data.found) {
+        body.style.display = 'none';
+        notfound.style.display = 'block';
+        notfound.textContent = 'シート「' + data.sheetName + '」が見つかりません(現行スプレッドシート側に該当月のシートがまだ無い可能性があります)。';
+        return;
+      }
+      notfound.style.display = 'none';
+      body.style.display = 'block';
+
+      const st = data.studioTotal;
+      document.getElementById('sales-monthly-summary').innerHTML =
+        salesTileHtml_('単月売上', st.monthAmount) +
+        salesTileHtml_('目標売上', st.targetAmount) +
+        salesTileHtml_('前年売上', st.lastYearAmount) +
+        salesTileHtml_('件数', st.monthCount);
+
+      document.getElementById('sales-genre-table').innerHTML = salesGenreTableHtml_(data.genres);
+      document.getElementById('sales-decade-table').innerHTML = salesDecadeTableHtml_(data.genres);
+      document.getElementById('sales-business-table').innerHTML = salesGenreTableHtml_(data.business);
+
+      const errNote = document.getElementById('sales-monthly-errnote');
+      if (data.errorCellCount > 0) {
+        errNote.style.display = 'block';
+        errNote.textContent = '※ 元シートに数式エラーが' + data.errorCellCount + '箇所あります(「—」表示)。';
+      } else {
+        errNote.style.display = 'none';
+      }
+    }
+
+    function salesAnnualMatrixHtml_(genres, months, monthKey, totalKey) {
+      const head = '<th>ジャンル</th>' + months.map(function (m) { return '<th>' + m + '</th>'; }).join('') + '<th>合計</th>';
+      const rows = genres.map(function (g) {
+        const cells = (g[monthKey] || []).map(function (v) { return '<td>' + esc(v) + '</td>'; }).join('');
+        return '<tr><td>' + esc(g.genre) + '</td>' + cells + '<td>' + esc(g[totalKey]) + '</td></tr>';
+      }).join('');
+      return '<thead><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody>';
+    }
+
+    function salesAnnualYoyHtml_(data, months) {
+      const st = data.studioTotal, ly = data.lastYearTotal, yoy = data.monthlyYoy;
+      function row(label, arr, total) {
+        const cells = (arr || []).map(function (v) { return '<td>' + esc(v) + '</td>'; }).join('');
+        return '<tr><td>' + esc(label) + '</td>' + cells + '<td>' + esc(total) + '</td></tr>';
+      }
+      const head = '<th></th>' + months.map(function (m) { return '<th>' + m + '</th>'; }).join('') + '<th>合計</th>';
+      return '<thead><tr>' + head + '</tr></thead><tbody>' +
+        row('今年 売上', st.salesByMonth, st.salesTotal) +
+        row('前年 売上', ly.salesByMonth, ly.salesTotal) +
+        row('前年比(売上)', yoy.salesByMonth, yoy.salesTotal) +
+        row('今年 件数', st.countsByMonth, st.countTotal) +
+        row('前年 件数', ly.countsByMonth, ly.countTotal) +
+        row('前年比(件数)', yoy.countByMonth, yoy.countTotal) +
+        '</tbody>';
+    }
+
+    function loadSalesAnnual() {
+      clearError();
+      document.getElementById('loadingSalesAnnual').style.display = 'block';
+      document.getElementById('sec-sales-annual').style.display = 'none';
+      google.script.run
+        .withSuccessHandler(function (data) {
+          try {
+            renderSalesAnnual(data);
+          } catch (e) {
+            document.getElementById('loadingSalesAnnual').style.display = 'none';
+            showError('画面の描画でエラーが発生しました: ' + (e && e.message ? e.message : e));
+          }
+        })
+        .withFailureHandler(function (err) {
+          document.getElementById('loadingSalesAnnual').style.display = 'none';
+          showError(err.message || err);
+        })
+        .getAnnual(salesAnnualYear_);
+    }
+
+    function renderSalesAnnual(data) {
+      document.getElementById('loadingSalesAnnual').style.display = 'none';
+      document.getElementById('sec-sales-annual').style.display = 'block';
+      if (!data) {
+        showError('サーバーから空の応答が返りました。ブラウザの拡張機能(広告ブロッカー等)が' +
+          '通信を妨げている可能性があります。');
+        return;
+      }
+      document.getElementById('sales-annual-label').textContent = data.year + '年';
+
+      const body = document.getElementById('sales-annual-body');
+      const notfound = document.getElementById('sales-annual-notfound');
+      if (!data.found) {
+        body.style.display = 'none';
+        notfound.style.display = 'block';
+        notfound.textContent = 'シート「' + data.sheetName + '」が見つかりません。';
+        return;
+      }
+      notfound.style.display = 'none';
+      body.style.display = 'block';
+
+      const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+
+      document.getElementById('sales-annual-sales-table').innerHTML =
+        salesAnnualMatrixHtml_(data.genres, months, 'salesByMonth', 'salesTotal');
+      document.getElementById('sales-annual-count-table').innerHTML =
+        salesAnnualMatrixHtml_(data.genres, months, 'countsByMonth', 'countTotal');
+      document.getElementById('sales-annual-yoy-table').innerHTML =
+        salesAnnualYoyHtml_(data, months);
+
+      const errNote = document.getElementById('sales-annual-errnote');
+      if (data.errorCellCount > 0) {
+        errNote.style.display = 'block';
+        errNote.textContent = '※ 元シートに数式エラーが' + data.errorCellCount + '箇所あります(「—」表示)。';
+      } else {
+        errNote.style.display = 'none';
+      }
     }
 
     loadToday();
