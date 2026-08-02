@@ -387,7 +387,15 @@
       document.getElementById('loadingToday').style.display = 'block';
       document.getElementById('statsRow').style.display = 'none';
       google.script.run
-        .withSuccessHandler(renderToday)
+        .withSuccessHandler(function (data) {
+          try {
+            renderToday(data);
+          } catch (e) {
+            document.getElementById('loadingToday').style.display = 'none';
+            showError('画面の描画でエラーが発生しました: ' + (e && e.message ? e.message : e) +
+              (e && e.stack ? ('\n' + e.stack) : ''));
+          }
+        })
         .withFailureHandler(function (err) { showError(err.message || err); document.getElementById('loadingToday').style.display = 'none'; })
         .getToday();
     }
