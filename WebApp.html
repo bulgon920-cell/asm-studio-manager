@@ -255,15 +255,20 @@
 
     /* 節目タブ */
     .lifecycle-item {
-      background: #fbf9f4; border-radius: 14px; padding: 12px 13px; margin-bottom: 8px;
+      background: #fbf9f4; border-radius: 14px; padding: 14px 15px; margin-bottom: 10px;
       border: 1px solid #f0ece1; cursor: pointer;
     }
     .lifecycle-item:last-child { margin-bottom: 0; }
     .lifecycle-item.contacted { opacity: 0.45; }
     .lifecycle-item:active { background: #f4efe2; }
+    .lifecycle-item .row-main { font-size: 19px; font-weight: bold; }
+    .lifecycle-item .row-sub { font-size: 15px; font-weight: bold; color: #4c453a; margin-top: 5px; }
+    .lifecycle-item .lc-birth {
+      font-size: 16px; font-weight: bold; color: #b3372f; margin-top: 5px;
+    }
     .lifecycle-item .memo {
-      margin-top: 6px; padding: 8px 10px; background: #fdf6e6; border-radius: 10px;
-      font-size: 13px; color: #7a5a00;
+      margin-top: 8px; padding: 9px 11px; background: #fdf6e6; border-radius: 10px;
+      font-size: 15px; font-weight: bold; color: #7a5a00;
     }
     .lifecycle-item .contact-btn {
       margin-top: 8px; background: #2fb78c; color: #fff; border: none; border-radius: 999px;
@@ -1019,6 +1024,7 @@
       return '<div class="' + cls + '"' + openable + '>' +
         '<div class="row-main"><span>' + esc(it.childName) + ' — ' + esc(it.milestoneName) + '</span>' +
         (it.dueDate ? '<span class="row-sub">目安: ' + esc(it.dueDate) + '</span>' : '') + '</div>' +
+        (it.birthDate ? '<div class="lc-birth">🎂 誕生日: ' + esc(it.birthDate) + '</div>' : '') +
         '<div class="row-sub">保護者: ' + esc(it.parentName) + '様' +
         (it.contact ? ' / ' + esc(it.contact) : '') + (it.line ? ' / LINE有' : '') + '</div>' +
         (it.lastVisitDate ? '<div class="row-sub">最終来店: ' + esc(it.lastVisitDate) + ' ' + esc(it.lastVisitGenre) + '</div>' : '') +

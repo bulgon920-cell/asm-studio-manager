@@ -165,7 +165,7 @@ function getLifecycle() {
       if (rule.genre && hasGenreShotThisYear_(custShoots, m.memberId, rule.genre, hit.year)) return;
 
       const key = rule.name + '|' + hit.year + '|' + m.memberId;
-      results.push(buildLifecycleItem_(m.memberId, m.customerId, m.名前, rule.name, hit.year,
+      results.push(buildLifecycleItem_(m.memberId, m.customerId, m.名前, m.誕生日, rule.name, hit.year,
         hit.targetDate, cust, lastShoot, memoByName, contacted, key));
     });
   });
@@ -191,7 +191,7 @@ function getLifecycle() {
 
       const key = elapsedRule.name + '|' + today.getFullYear() + '|' + youngest.memberId;
       results.push(buildLifecycleItem_(youngest.memberId, cust.customerId, youngest.名前 + '(末っ子)',
-        elapsedRule.name, today.getFullYear(), null, cust, lastShoot, memoByName, contacted, key));
+        youngest.誕生日, elapsedRule.name, today.getFullYear(), null, cust, lastShoot, memoByName, contacted, key));
     });
   }
 
@@ -204,10 +204,11 @@ function getLifecycle() {
   return sanitizeForClient_({ items: results, noBirthdayCount: noBirthdayCount });
 }
 
-function buildLifecycleItem_(memberId, customerId, childName, milestoneName, targetYear,
+function buildLifecycleItem_(memberId, customerId, childName, birthDate, milestoneName, targetYear,
   targetDate, cust, lastShoot, memoByName, contacted, key) {
   return {
     memberId: memberId, customerId: customerId, childName: childName,
+    birthDate: (birthDate instanceof Date) ? isoDate_(birthDate) : '',
     milestoneName: milestoneName, targetYear: targetYear,
     dueDate: targetDate ? isoDate_(targetDate) : '',
     parentName: cust.顧客名, contact: cust.連絡先 || '', line: !!cust.LINE有無,
