@@ -78,7 +78,7 @@ function resolveOrderReview_(ss, orderId, payload) {
   if (to === '完了' && found.colOf['完了日']) {
     found.sh.getRange(found.rowIndex, found.colOf['完了日']).setValue(new Date());
   }
-  return { orderId: orderId, status: to };
+  return sanitizeForClient_({ orderId: orderId, status: to });
 }
 
 function resolveCustomerReview_(ss, customerId) {
@@ -88,7 +88,7 @@ function resolveCustomerReview_(ss, customerId) {
   // 統合はv1に含めない(WEB_SPEC §3)。「別家族として確認済み」のマークのみ。
   appendEvent_(ss, customerId, '要確認', 'TRUE', 'FALSE(別家族として確認済み)', 'Web(要確認解消)');
   sh.getRange(found.rowIndex, found.colOf['要確認']).setValue(false);
-  return { customerId: customerId };
+  return sanitizeForClient_({ customerId: customerId });
 }
 
 function resolveShootReview_(ss, shootId) {
@@ -97,7 +97,7 @@ function resolveShootReview_(ss, shootId) {
   if (!found) throw new Error('撮影が見つかりません: ' + shootId);
   appendEvent_(ss, shootId, '要確認', 'TRUE', 'FALSE(確認済み)', 'Web(要確認解消)');
   sh.getRange(found.rowIndex, found.colOf['要確認']).setValue(false);
-  return { shootId: shootId };
+  return sanitizeForClient_({ shootId: shootId });
 }
 
 // ===== 成人セレクト確定 =====
@@ -141,7 +141,7 @@ function confirmAdultSelect(orderId, product, options) {
     });
     if (newRows.length) writeSheet_(ss, 'Orders', newRows);
 
-    return { orderId: orderId, product: product, addedOptions: opts };
+    return sanitizeForClient_({ orderId: orderId, product: product, addedOptions: opts });
   } finally {
     lock.releaseLock();
   }
@@ -180,7 +180,7 @@ function addOrder(shootId, orderType) {
     writeSheet_(ss, 'Orders', [[newId, shootId, orderType, initialStatus, '', '', '', '', '', new Date(), '']]);
     appendEvent_(ss, newId, '生成', '', orderType + '(status=' + initialStatus + ')', 'Web(注文追加)');
 
-    return { orderId: newId, status: initialStatus };
+    return sanitizeForClient_({ orderId: newId, status: initialStatus });
   } finally {
     lock.releaseLock();
   }

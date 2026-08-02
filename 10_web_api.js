@@ -13,6 +13,13 @@ function doGet() {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
+// google.script.runは戻り値にDate型が混じっていると応答そのものをnullにすることがある。
+// 返す直前にJSON往復させ、Dateを文字列化(等)して安全なプレーンオブジェクトにする。
+// 全API(読み取り・書き込み)共通で使う。
+function sanitizeForClient_(payload) {
+  return JSON.parse(JSON.stringify(payload));
+}
+
 // ===== 今日の画面 =====
 
 const ACTIVE_ORDER_STATUS_ = [
@@ -107,7 +114,7 @@ function getToday() {
   sortByElapsedDesc_(needsReview);
   sortByDue_(waiting);
 
-  return {
+  return sanitizeForClient_({
     generatedAt: Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd HH:mm'),
     todayShoots: readTodayShoots_(ss),
     // 朝の更新(13_morning.js)が失敗した場合のエラーを画面上部に表示するため(W4)
@@ -115,7 +122,7 @@ function getToday() {
     needsReview: needsReview,
     todo: todo,
     waiting: waiting
-  };
+  });
 }
 
 // Configの注文種別マスタ(区分=注文種別)から 種別名→系統 を引く
@@ -225,7 +232,7 @@ function getShootDetail(shootId) {
     .filter(function (m) { return targetMemberIds.indexOf(m.memberId) >= 0; })
     .map(function (m) { return { name: m.名前, birth: isoDate_(m.誕生日) }; });
 
-  return {
+  return sanitizeForClient_({
     shootId: shoot.shootId,
     date: isoDate_(shoot.撮影日),
     genre: shoot.ジャンル,
@@ -245,7 +252,7 @@ function getShootDetail(shootId) {
     orders: orders,
     // 「+ 注文を追加」のドロップダウン用(W3)
     orderTypeOptions: Object.keys(readOrderTypeCategory_(ss))
-  };
+  });
 }
 
 // ===== 状態遷移(表示用・読み取りのみ) =====

@@ -37,7 +37,7 @@ function updateStatus(orderId, to) {
     if (to === '完了' && found.colOf['完了日']) {
       found.sh.getRange(found.rowIndex, found.colOf['完了日']).setValue(new Date());
     }
-    return { orderId: orderId, status: to };
+    return sanitizeForClient_({ orderId: orderId, status: to });
   } finally {
     lock.releaseLock();
   }
@@ -78,7 +78,7 @@ function updateOrderFields(orderId, fields) {
       found.sh.getRange(found.rowIndex, col).setValue(setVal);
     });
 
-    return { orderId: orderId };
+    return sanitizeForClient_({ orderId: orderId });
   } finally {
     lock.releaseLock();
   }

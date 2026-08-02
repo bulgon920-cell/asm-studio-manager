@@ -36,7 +36,7 @@ function morningUpdate() {
     setMorningConfigValue_(ss, 'LAST_ERROR', '');
     setMorningConfigValue_(ss, 'LAST_RUN', Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd HH:mm'));
     Logger.log('朝の更新完了: カレンダー' + todayRows.length + '件、照合候補' + matches.length + '件');
-    return { ok: true, count: todayRows.length, matchCount: matches.length };
+    return sanitizeForClient_({ ok: true, count: todayRows.length, matchCount: matches.length });
   } catch (e) {
     // 失敗時は既存のTodayシートを書き換えていないため、前回の表示がそのまま残る。
     setMorningConfigValue_(ss, 'LAST_ERROR', String((e && e.message) || e));

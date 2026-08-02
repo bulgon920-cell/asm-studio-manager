@@ -402,6 +402,11 @@
 
     function renderToday(data) {
       document.getElementById('loadingToday').style.display = 'none';
+      if (!data) {
+        showError('サーバーから空の応答が返りました。ブラウザの拡張機能(広告ブロッカー等)が' +
+          '通信を妨げている可能性があります。無効化して再読込してください。');
+        return;
+      }
       document.getElementById('genAt').textContent = '最終更新 ' + data.generatedAt;
       if (data.morningError) {
         showError('朝の更新でエラーが発生しています(前回の表示のままです): ' + data.morningError);
@@ -536,7 +541,15 @@
       document.getElementById('detailBody').innerHTML = '<div class="loading">読み込み中…</div>';
       showDetail();
       google.script.run
-        .withSuccessHandler(renderDetail)
+        .withSuccessHandler(function (data) {
+          try {
+            renderDetail(data);
+          } catch (e) {
+            showError('画面の描画でエラーが発生しました: ' + (e && e.message ? e.message : e) +
+              (e && e.stack ? ('\n' + e.stack) : ''));
+            document.getElementById('detailBody').innerHTML = '';
+          }
+        })
         .withFailureHandler(function (err) {
           showError(err.message || err);
           document.getElementById('detailBody').innerHTML = '';
@@ -545,6 +558,12 @@
     }
 
     function renderDetail(d) {
+      if (!d) {
+        showError('サーバーから空の応答が返りました。ブラウザの拡張機能(広告ブロッカー等)が' +
+          '通信を妨げている可能性があります。無効化して再読込してください。');
+        document.getElementById('detailBody').innerHTML = '';
+        return;
+      }
       window.currentShootId = d.shootId;
       const cust = d.customer;
       const members = d.targetMembers.map(function (m) {
