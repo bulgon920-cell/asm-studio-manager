@@ -93,6 +93,7 @@
     }
     .chip.overdue { background: #fbdede; color: #a3271f; }
     .chip.warn { background: #fdecc8; color: #8a5a00; }
+    .chip.ad { background: #e4e8fb; color: #33449c; }
 
     /* 撮影日からの経過日数バッジ(右上) */
     .days-badge {
@@ -352,6 +353,14 @@
       return '<span class="days-badge ' + cls + '">' + n + '日目</span>';
     }
 
+    // 案件名の後ろに付ける撮影日「(5/4撮影)」
+    function shootDateSuffix_(iso) {
+      if (!iso) return '';
+      const parts = iso.split('-');
+      if (parts.length !== 3) return '';
+      return '(' + Number(parts[1]) + '/' + Number(parts[2]) + '撮影)';
+    }
+
     function loadToday() {
       clearError();
       document.getElementById('loadingToday').style.display = 'block';
@@ -404,7 +413,8 @@
           '<button class="neutral" onclick="doResolveCustomer(\'' + esc(it.customerId) + '\')">別家族として確認済み</button></div>'
         : '';
       return '<li class="' + cls + '"' + click + '>' +
-        '<div class="row-main"><span>' + esc(it.label) + '</span>' + daysBadgeHtml_(it.elapsedDays) + '</div>' +
+        '<div class="row-main"><span>' + esc(it.label) + ' ' + shootDateSuffix_(it.shootDate) + '</span>' +
+        daysBadgeHtml_(it.elapsedDays) + '</div>' +
         '<div class="row-sub"><span class="chip warn">' + labelKind_(it.kind) + '</span></div>' +
         customerBtn + '</li>';
     }
@@ -468,7 +478,8 @@
       const overdue = it.dueDate && it.dueDate < todayStr;
       const due = it.dueDate ? ('期限 ' + it.dueDate) : (it.finishDate ? ('仕上がり予定 ' + it.finishDate) : '期限なし');
       return '<li class="item-card clickable" onclick="openShoot(\'' + esc(it.shootId) + '\')">' +
-        '<div class="row-main"><span>' + esc(it.orderType) + ' ' + esc(it.customerName) + '様</span>' +
+        '<div class="row-main"><span>' + esc(it.orderType) + ' ' + esc(it.customerName) + '様 ' +
+        shootDateSuffix_(it.shootDate) + '</span>' +
         daysBadgeHtml_(it.elapsedDays) + '</div>' +
         '<div class="row-sub"><span class="chip' + (overdue ? ' overdue' : '') + '">' + esc(it.status) + '</span> ' +
         esc(due) + (overdue ? ' ・期限超過' : '') + '</div></li>';
@@ -498,7 +509,9 @@
       const past = d.pastShoots.length
         ? '<ul class="list">' + d.pastShoots.map(function (p) {
             return '<li class="item-card clickable" onclick="openShoot(\'' + esc(p.shootId) + '\')">' +
-              '<div class="row-main"><span>' + esc(p.date) + ' ' + esc(p.genre) + '</span><span class="row-sub">詳細 →</span></div></li>';
+              '<div class="row-main"><span>' + esc(p.date) + ' ' + esc(p.genre) +
+              (d.isBusiness ? ' <span class="chip ad">広告</span>' : '') +
+              '</span><span class="row-sub">詳細 →</span></div></li>';
           }).join('') + '</ul>'
         : '<div class="empty">過去の来店はありません</div>';
 
@@ -524,7 +537,8 @@
         '<div class="detail-head">' +
         '<h1>' + esc(cust ? cust.name : '(不明な顧客)') + '様' +
         (cust ? ' (' + esc(cust.customerId) + ')' : '') +
-        (d.needsReview ? ' <span class="chip warn">要確認</span>' : '') + '</h1>' +
+        (d.needsReview ? ' <span class="chip warn">要確認</span>' : '') +
+        (d.isBusiness ? ' <span class="chip ad">広告</span>' : '') + '</h1>' +
         '<div class="meta">' + esc(d.genre) + ' ' + esc(d.date) + ' / HP掲載: ' + esc(d.hp) + '</div>' +
         '</div>' +
         shootReviewBox +

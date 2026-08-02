@@ -69,6 +69,7 @@ function getToday() {
     if (o.status === '要確認') {
       needsReview.push({
         kind: 'order', shootId: o.shootId, category: item.category, elapsedDays: elapsedDays,
+        shootDate: item.shootDate,
         label: custName + '様 実状態を確定する'
       });
     } else if (ACTIVE_ORDER_STATUS_.indexOf(o.status) >= 0) {
@@ -86,6 +87,7 @@ function getToday() {
     if (s.要確認) {
       needsReview.push({
         kind: 'shoot', shootId: s.shootId, category: 'other', elapsedDays: elapsedDaysOf_(s),
+        shootDate: isoDate_(s.撮影日),
         label: customerById[s.customerId] ? customerById[s.customerId].顧客名 + '様 撮影情報の確認(' + (s.ジャンル || '') + ')'
           : '撮影情報の確認(' + (s.ジャンル || '') + ')'
       });
@@ -172,6 +174,8 @@ function getShootDetail(shootId) {
 
   const customer = readObjects_(ss, 'Customers')
     .filter(function (c) { return c.customerId === shoot.customerId; })[0] || null;
+  // 業務ジャンル(広告撮影等)の判定。readBusinessGenreNames_は05_sync.jsのものを再利用(SYNC_SPEC §6)
+  const isBusinessShoot = !!(customer && readBusinessGenreNames_(ss).indexOf(customer.顧客名) >= 0);
 
   const members = readObjects_(ss, 'Family_Members')
     .filter(function (m) { return m.customerId === shoot.customerId; });
@@ -214,6 +218,7 @@ function getShootDetail(shootId) {
     genre: shoot.ジャンル,
     hp: shoot.HP掲載について,
     needsReview: !!shoot.要確認,
+    isBusiness: isBusinessShoot,
     remarks: shoot.備考 || '',
     driveUrl: shoot.DriveフォルダURL || '',
     albumUrl: shoot.オンラインアルバムURL || '',

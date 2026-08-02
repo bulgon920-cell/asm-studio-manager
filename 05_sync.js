@@ -28,6 +28,7 @@ function syncCore_(dryRun) {
   try {
     const targetSs = SpreadsheetApp.openById(TARGET_SPREADSHEET_ID);
     ensureSyncInitialized_(targetSs);
+    ensureBusinessGenreConfig_(targetSs);
 
     const sourceSh = getSourceMasterLogSheet_();
     const allRows = readMasterLogRows_(sourceSh);
@@ -101,6 +102,30 @@ function ensureSyncInitialized_(targetSs) {
   setConfigValue_(targetSs, 'SYNC_LAST_HASH', hashRow_(lastSnapRow));
   Logger.log('同期位置を移行スナップショット基準で初期化しました: 大本行' + lastSnapRow.srcRow +
     '(この行までは移行済みとして扱います)');
+}
+
+// ===== 業務ジャンル(広告撮影など、顧客ではない行。SYNC_SPEC §6) =====
+
+// 初回のみ: Configに「区分=業務ジャンル」の初期値(その他撮影)を登録する(冪等)。
+function ensureBusinessGenreConfig_(targetSs) {
+  const sh = targetSs.getSheetByName('Config');
+  const values = sh.getDataRange().getValues();
+  for (var r = 1; r < values.length; r++) {
+    if (values[r][0] === '業務ジャンル') return; // 既に1件でもあれば初期化済みとみなす
+  }
+  sh.appendRow(['業務ジャンル', 'その他撮影', '', '', '']);
+  Logger.log('Configに業務ジャンルの初期値(その他撮影)を登録しました。');
+}
+
+// Config(区分=業務ジャンル)に登録された名前の一覧。07_cleanup.js/10_web_api.jsからも再利用する。
+function readBusinessGenreNames_(ss) {
+  const sh = ss.getSheetByName('Config');
+  const values = sh.getDataRange().getValues();
+  const names = [];
+  for (var r = 1; r < values.length; r++) {
+    if (values[r][0] === '業務ジャンル' && values[r][1]) names.push(values[r][1]);
+  }
+  return names;
 }
 
 // ===== 大本Master_Logの読み取り(構造は02_migrate.jsのreadSnapshot_と同じ) =====
@@ -242,7 +267,8 @@ function buildSyncIndex_(targetSs) {
     byNamePhone: byNamePhone,
     byNameAddr: byNameAddr,
     nameSeen: nameSeen,
-    memberKeysByCustomer: memberKeysByCustomer
+    memberKeysByCustomer: memberKeysByCustomer,
+    businessNames: readBusinessGenreNames_(targetSs)
   };
 }
 
@@ -289,6 +315,8 @@ function setConfigValue_(ss, key, value) {
 
 function processSyncRow_(row, idx, plan) {
   var custId = null, isNewCustomer = false, customerNeedsReview = false;
+  // 業務ジャンル(広告撮影等): (a)同名要確認の対象外 (b)Orders起票なし (c)Shootsは通常通り。SYNC_SPEC §6
+  const isBusiness = idx.businessNames.indexOf(row.name) >= 0;
 
   row.children.forEach(function (ch) {
     if (custId) return;
@@ -308,7 +336,7 @@ function processSyncRow_(row, idx, plan) {
     isNewCustomer = true;
     idx.customerSeq++;
     custId = 'C-' + pad_(idx.customerSeq, 5);
-    customerNeedsReview = !!idx.nameSeen[norm_(row.name)];
+    customerNeedsReview = isBusiness ? false : !!idx.nameSeen[norm_(row.name)];
     plan.customers.push({
       id: custId, name: row.name, kana: '', contact: row.contact, zip: row.zip,
       addr: row.addr, line: hasLine_(row.remarks), remarks: '', needsReview: customerNeedsReview
@@ -347,7 +375,9 @@ function processSyncRow_(row, idx, plan) {
 
   var shootNeedsReview = !row.date;
   var orderType = '', orderStatus = '';
-  if (!row.genre) {
+  if (isBusiness) {
+    // (b) 業務ジャンルはOrdersを起票しない。実際の仕事ではないため進行管理の対象にしない。
+  } else if (!row.genre) {
     shootNeedsReview = true; // ジャンル不明: 注文を作らずShoots.要確認=TRUEのみ
   } else {
     const isAdult = ADULT_GENRE_KEYWORDS.some(function (kw) { return row.genre.indexOf(kw) >= 0; });
@@ -387,7 +417,7 @@ function processSyncRow_(row, idx, plan) {
     date: row.date ? isoDate_(row.date) : '(日付不明)', genre: row.genre || '(不明)',
     customerId: custId, isNewCustomer: isNewCustomer, customerNeedsReview: customerNeedsReview,
     shootId: shootId, shootNeedsReview: shootNeedsReview,
-    orderId: newOrderId, orderStatus: orderStatus
+    orderId: newOrderId, orderStatus: orderStatus, isBusiness: isBusiness
   };
 }
 
@@ -413,11 +443,13 @@ function writeSyncReport_(targetSs, results, totalNew, errorMsg, dryRun) {
     const newCustCount = results.filter(function (r) { return r.isNewCustomer; }).length;
     const reviewCustCount = results.filter(function (r) { return r.customerNeedsReview; }).length;
     const reviewShootCount = results.filter(function (r) { return r.shootNeedsReview; }).length;
+    const businessCount = results.filter(function (r) { return r.isBusiness; }).length;
     rows.push(['■ 内訳', '']);
     rows.push(['新規顧客', newCustCount]);
     rows.push(['既存顧客への追加撮影', results.length - newCustCount]);
     rows.push(['要確認(顧客・同名)', reviewCustCount]);
     rows.push(['要確認(撮影・日付/ジャンル不明)', reviewShootCount]);
+    rows.push(['業務ジャンル(Orders起票なし)', businessCount]);
     rows.push(['', '']);
     rows.push(['■ 明細', '']);
     results.forEach(function (r) {
@@ -425,7 +457,7 @@ function writeSyncReport_(targetSs, results, totalNew, errorMsg, dryRun) {
         r.date + ' ' + r.name + ' ' + r.genre + ' → ' +
         r.customerId + (r.isNewCustomer ? '(新規)' : '') + ' / ' +
         r.shootId + (r.shootNeedsReview ? '(要確認)' : '') + ' / ' +
-        (r.orderId ? r.orderId + '(' + r.orderStatus + ')' : '(注文なし)')
+        (r.isBusiness ? '(業務ジャンル・注文なし)' : (r.orderId ? r.orderId + '(' + r.orderStatus + ')' : '(注文なし)'))
       ]);
     });
   }
