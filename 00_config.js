@@ -38,5 +38,6 @@ const SOURCE_MASTER_LOG_SHEET_NAME = 'Master_Log';
 const CALENDAR_ID = 'bulgon920@gmail.com';
 
 // 売上タブ(15_sales.js)の読み先: 現行「スタジオデイズ顧客名簿&月毎売上」の
-// スプレッドシートID。ここには一切書き込まない(読み取り専用)。値はユーザーが入れる。
-const SALES_SOURCE_ID = 'ここに現行売上シートのIDを貼る';
+// スプレッドシートID。ここには一切書き込まない(読み取り専用)。
+// SOURCE_MASTER_LOG_IDと同一スプレッドシート内の別タブ(ユーザー確認済み、2026-08-02)。
+const SALES_SOURCE_ID = '1a4-g8kkowwKVTYO66gptatzknZhXjI-EKXSijXza_TE';
