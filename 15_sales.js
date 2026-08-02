@@ -53,6 +53,16 @@ function inspectSalesSheet(sheetName) {
   }
 }
 
+// ===== 調査用・一時呼び出し(セル配置確認が終わったら削除する) =====
+// スクリプトエディタのRunボタンは引数なし関数しか実行できないため、
+// 実際のシート名を書いた呼び出し専用の関数を用意する。
+function inspectSalesSheet_MonthlySample() {
+  inspectSalesSheet('2025年04月');
+}
+function inspectSalesSheet_AnnualSample() {
+  inspectSalesSheet('2026年店分析');
+}
+
 // ===== 読み取りAPI(セル配置が判明してから実装する) =====
 //
 // function getSales(yearMonth) { ... }
