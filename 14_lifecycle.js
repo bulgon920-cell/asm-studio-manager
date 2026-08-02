@@ -80,7 +80,11 @@ const LIFECYCLE_RULES_ = [
   { name: '背の順家族写真', kind: 'elapsed', minAge: 7, minMonthsSinceVisit: 11 }
 ];
 
-function evalRule_(rule, member, today, windowEnd) {
+// 誕生日型(point)の表示は、対象日から最大でもこの月数だけ手前までに絞る
+// (以前はleadMonths通りに最大3ヶ月先まで出ており「遠くの子まで表示される」との指摘で短縮)
+const LIFECYCLE_WINDOW_MONTHS_ = 2;
+
+function evalRule_(rule, member, today) {
   const birth = member.誕生日;
   if (rule.kind === 'range') {
     const start = addMonths_(birth, rule.minMonths);
@@ -90,8 +94,9 @@ function evalRule_(rule, member, today, windowEnd) {
   }
   if (rule.kind === 'point') {
     const target = rule.years != null ? addYears_(birth, rule.years) : addMonths_(birth, rule.months);
-    const displayStart = addMonths_(target, -(rule.leadMonths || 0));
-    if (today < displayStart || today > windowEnd || today > target) return null;
+    const leadMonths = Math.min(rule.leadMonths || 0, LIFECYCLE_WINDOW_MONTHS_);
+    const displayStart = addMonths_(target, -leadMonths);
+    if (today < displayStart || today > target) return null;
     return { year: target.getFullYear(), targetDate: target };
   }
   if (rule.kind === 'yearly' || rule.kind === 'school') {
@@ -142,7 +147,6 @@ function getLifecycle() {
   });
 
   const today = new Date();
-  const windowEnd = addMonths_(today, 3);
   const results = [];
   var noBirthdayCount = 0;
 
@@ -159,7 +163,7 @@ function getLifecycle() {
       if (rule.kind === 'elapsed') return; // 家族単位。下の別ループで処理
       if (rule.gender && String(m.性別 || '') !== rule.gender) return;
 
-      const hit = evalRule_(rule, m, today, windowEnd);
+      const hit = evalRule_(rule, m, today);
       if (!hit) return;
       // 済みフィルタ: 該当ジャンルを対象年に撮影済みの子は除外(§2)
       if (rule.genre && hasGenreShotThisYear_(custShoots, m.memberId, rule.genre, hit.year)) return;
