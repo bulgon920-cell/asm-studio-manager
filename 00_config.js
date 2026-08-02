@@ -6,13 +6,13 @@
 
 // 移行元: Master_Log_snapshot_YYYYMMDD のスプレッドシートID
 // (URLの /d/ と /edit の間の文字列)
-const SNAPSHOT_SPREADSHEET_ID = 'ここにスナップショットのIDを貼る';
+const SNAPSHOT_SPREADSHEET_ID = '1hmI0Tdi9XcboG8JmWoIHndFfsCTjLr7eGsEO0WE4ZtM';
 
 // 移行元のシート名。空欄 '' なら1枚目のシートを使う
-const SNAPSHOT_SHEET_NAME = '';
+const SNAPSHOT_SHEET_NAME = 'Master_Log_snapshot_20260801';
 
 // 移行先: setupNewEnvironment() 実行後にログへ表示されるIDを貼る
-const TARGET_SPREADSHEET_ID = 'ここに新環境のIDを貼る';
+const TARGET_SPREADSHEET_ID = '1kD95cWFXY-hDQ8EBxm0nxSTijG9cvg5TVByyzQEKcx0';
 
 // 撮影日からこの日数を超えて仕上がり予定日がない案件は「完了(移行時推定)」にする
 const COMPLETION_DAYS = 90;
