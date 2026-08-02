@@ -244,6 +244,32 @@
       background: #2f6fd6; color: #fff; border: none; border-radius: 999px;
       padding: 8px 16px; font-size: 14px; font-weight: bold; cursor: pointer;
     }
+
+    /* タブ切り替え */
+    .tabbar { display: flex; gap: 8px; margin-bottom: 12px; }
+    .tab-btn {
+      flex: 1; background: #fffdf9; border: 1px solid #ede7d6; border-radius: 999px;
+      padding: 10px 14px; font-size: 15px; font-weight: bold; color: #8c8474; cursor: pointer;
+    }
+    .tab-btn.active { background: #322d24; color: #fff; border-color: #322d24; }
+
+    /* 節目タブ */
+    .lifecycle-item {
+      background: #fbf9f4; border-radius: 14px; padding: 12px 13px; margin-bottom: 8px;
+      border: 1px solid #f0ece1; cursor: pointer;
+    }
+    .lifecycle-item:last-child { margin-bottom: 0; }
+    .lifecycle-item.contacted { opacity: 0.45; }
+    .lifecycle-item:active { background: #f4efe2; }
+    .lifecycle-item .memo {
+      margin-top: 6px; padding: 8px 10px; background: #fdf6e6; border-radius: 10px;
+      font-size: 13px; color: #7a5a00;
+    }
+    .lifecycle-item .contact-btn {
+      margin-top: 8px; background: #2fb78c; color: #fff; border: none; border-radius: 999px;
+      padding: 7px 14px; font-size: 13px; font-weight: bold; cursor: pointer;
+    }
+    .lifecycle-item .contact-btn:active { opacity: 0.85; }
   </style>
 </head>
 <body>
@@ -265,6 +291,11 @@
         </div>
       </div>
     </header>
+
+    <div class="tabbar">
+      <button class="tab-btn active" id="tabToday" onclick="switchTab_('today')">📅 今日</button>
+      <button class="tab-btn" id="tabLifecycle" onclick="switchTab_('lifecycle')">🎂 節目</button>
+    </div>
 
     <div id="todayView">
       <div id="loadingToday" class="loading">読み込み中…</div>
@@ -332,6 +363,15 @@
       </section>
     </div>
 
+    <div id="lifecycleView" class="hidden">
+      <div id="loadingLifecycle" class="loading">読み込み中…</div>
+      <section class="card" id="sec-lifecycle" style="display:none">
+        <h2>🎂 節目 <span class="badge accent" id="cnt-lifecycle">0</span></h2>
+        <div id="list-lifecycle"></div>
+        <div class="row-sub" id="lifecycle-no-birthday" style="margin-top:10px"></div>
+      </section>
+    </div>
+
     <div id="detailView" class="hidden">
       <button class="backbtn" onclick="backToToday()">← 今日の画面へ戻る</button>
       <section class="card" id="detailBody"></section>
@@ -363,17 +403,31 @@
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
+    var currentTab_ = 'today';
+    var lifecycleLoaded_ = false;
+
+    function switchTab_(tab) {
+      currentTab_ = tab;
+      document.getElementById('tabToday').classList.toggle('active', tab === 'today');
+      document.getElementById('tabLifecycle').classList.toggle('active', tab === 'lifecycle');
+      document.getElementById('todayView').classList.toggle('hidden', tab !== 'today');
+      document.getElementById('lifecycleView').classList.toggle('hidden', tab !== 'lifecycle');
+      document.getElementById('detailView').classList.add('hidden');
+      if (tab === 'lifecycle' && !lifecycleLoaded_) loadLifecycle();
+    }
+
     function showToday() {
       document.getElementById('detailView').classList.add('hidden');
-      document.getElementById('todayView').classList.remove('hidden');
+      document.getElementById(currentTab_ === 'lifecycle' ? 'lifecycleView' : 'todayView').classList.remove('hidden');
     }
     function showDetail() {
       document.getElementById('todayView').classList.add('hidden');
+      document.getElementById('lifecycleView').classList.add('hidden');
       document.getElementById('detailView').classList.remove('hidden');
     }
     function backToToday() {
       showToday();
-      loadToday();
+      if (currentTab_ === 'lifecycle') loadLifecycle(); else loadToday();
     }
 
     (function initDate() {
@@ -908,6 +962,77 @@
         })
         .withFailureHandler(function (err) { showError(err.message || err); })
         .addOrder(shootId, type);
+    }
+
+    // ===== 節目タブ =====
+
+    function loadLifecycle() {
+      clearError();
+      document.getElementById('loadingLifecycle').style.display = 'block';
+      document.getElementById('sec-lifecycle').style.display = 'none';
+      google.script.run
+        .withSuccessHandler(function (data) {
+          try {
+            renderLifecycle(data);
+          } catch (e) {
+            document.getElementById('loadingLifecycle').style.display = 'none';
+            showError('画面の描画でエラーが発生しました: ' + (e && e.message ? e.message : e));
+          }
+        })
+        .withFailureHandler(function (err) {
+          document.getElementById('loadingLifecycle').style.display = 'none';
+          showError(err.message || err);
+        })
+        .getLifecycle();
+    }
+
+    function renderLifecycle(data) {
+      lifecycleLoaded_ = true;
+      document.getElementById('loadingLifecycle').style.display = 'none';
+      if (!data) {
+        showError('サーバーから空の応答が返りました。ブラウザの拡張機能(広告ブロッカー等)が' +
+          '通信を妨げている可能性があります。');
+        return;
+      }
+      document.getElementById('sec-lifecycle').style.display = 'block';
+      document.getElementById('cnt-lifecycle').textContent = data.items.length;
+
+      const list = document.getElementById('list-lifecycle');
+      list.innerHTML = data.items.length
+        ? data.items.map(lifecycleItemHtml_).join('')
+        : '<div class="empty">対象の節目はありません 🎉</div>';
+
+      const noBirth = document.getElementById('lifecycle-no-birthday');
+      noBirth.textContent = data.noBirthdayCount > 0
+        ? '誕生日未登録の子: ' + data.noBirthdayCount + '件(節目の判定対象外)'
+        : '';
+    }
+
+    function lifecycleItemHtml_(it) {
+      const cls = 'lifecycle-item' + (it.contacted ? ' contacted' : '');
+      const openable = it.lastShootId ? ' onclick="openShoot(\'' + esc(it.lastShootId) + '\')"' : '';
+      const contactBtn = it.contacted
+        ? '<div class="row-sub">✓ 案内済み</div>'
+        : '<button class="contact-btn" onclick="event.stopPropagation(); doMarkContacted(\'' +
+          esc(it.memberId) + '\',\'' + esc(it.milestoneName) + '\',' + Number(it.targetYear) + ')">案内済みにする</button>';
+
+      return '<div class="' + cls + '"' + openable + '>' +
+        '<div class="row-main"><span>' + esc(it.childName) + ' — ' + esc(it.milestoneName) + '</span>' +
+        (it.dueDate ? '<span class="row-sub">目安: ' + esc(it.dueDate) + '</span>' : '') + '</div>' +
+        '<div class="row-sub">保護者: ' + esc(it.parentName) + '様' +
+        (it.contact ? ' / ' + esc(it.contact) : '') + (it.line ? ' / LINE有' : '') + '</div>' +
+        (it.lastVisitDate ? '<div class="row-sub">最終来店: ' + esc(it.lastVisitDate) + ' ' + esc(it.lastVisitGenre) + '</div>' : '') +
+        (it.memo ? '<div class="memo">💡 ' + esc(it.memo) + '</div>' : '') +
+        contactBtn +
+        '</div>';
+    }
+
+    function doMarkContacted(memberId, milestoneName, targetYear) {
+      clearError();
+      google.script.run
+        .withSuccessHandler(function () { showOk('案内済みにしました。'); loadLifecycle(); })
+        .withFailureHandler(function (err) { showError(err.message || err); })
+        .markContacted(memberId, milestoneName, targetYear);
     }
 
     loadToday();
