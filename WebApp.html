@@ -234,7 +234,10 @@
       <div class="head-right">
         <span class="pill-ok">更新済み</span>
         <span class="head-updated" id="genAt">読み込み中…</span>
-        <button class="reload" onclick="loadToday()">データを再読込</button>
+        <div style="display:flex; gap:6px;">
+          <button class="reload" id="morningBtn" onclick="doMorningUpdate()">🌅 朝の更新</button>
+          <button class="reload" onclick="loadToday()">再読込</button>
+        </div>
       </div>
     </header>
 
@@ -361,6 +364,24 @@
       return '(' + Number(parts[1]) + '/' + Number(parts[2]) + '撮影)';
     }
 
+    // W4: [朝の更新]ボタン。Calendarから再取得してToday_Shoots等を再生成する。
+    function doMorningUpdate() {
+      clearError();
+      const btn = document.getElementById('morningBtn');
+      if (btn) btn.disabled = true;
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (btn) btn.disabled = false;
+          showOk('朝の更新が完了しました(カレンダー' + res.count + '件)。');
+          loadToday();
+        })
+        .withFailureHandler(function (err) {
+          if (btn) btn.disabled = false;
+          showError('朝の更新でエラー: ' + (err.message || err) + '(前回の表示のままです)');
+        })
+        .morningUpdate();
+    }
+
     function loadToday() {
       clearError();
       document.getElementById('loadingToday').style.display = 'block';
@@ -374,6 +395,9 @@
     function renderToday(data) {
       document.getElementById('loadingToday').style.display = 'none';
       document.getElementById('genAt').textContent = '最終更新 ' + data.generatedAt;
+      if (data.morningError) {
+        showError('朝の更新でエラーが発生しています(前回の表示のままです): ' + data.morningError);
+      }
 
       document.getElementById('stat-shoots').textContent = data.todayShoots.length;
       document.getElementById('stat-review').textContent = data.needsReview.length;
@@ -393,16 +417,29 @@
       document.getElementById('cnt-shoots').textContent = shoots.length;
       sec.style.display = 'block';
       if (!shoots.length) {
-        list.innerHTML = '<div class="empty">本日の撮影情報はまだ表示できません(カレンダー連携はW4で追加予定)</div>';
+        list.innerHTML = '<div class="empty">本日・明日のカレンダー予定はありません(朝の更新が未実行の可能性もあります)</div>';
         return;
       }
-      list.innerHTML = '<ul class="list">' + shoots.map(function (s) {
-        const cls = 'item-card' + (s.shootId ? ' clickable' : '');
-        const onclick = s.shootId ? ' onclick="openShoot(\'' + esc(s.shootId) + '\')"' : '';
-        return '<li class="' + cls + '"' + onclick + '>' +
-          '<div class="row-main"><span>' + esc(s.time) + ' ' + esc(s.genre) + ' ' + esc(s.customerName) + '様</span>' +
-          (s.shootId ? '<span class="row-sub">詳細 →</span>' : '') + '</div></li>';
-      }).join('') + '</ul>';
+      list.innerHTML = '<ul class="list">' + shoots.map(shootCardHtml_).join('') + '</ul>';
+    }
+
+    function shootCardHtml_(s) {
+      const cls = 'item-card' + (s.matchShootId ? ' clickable' : '');
+      const onclick = s.matchShootId ? ' onclick="openShoot(\'' + esc(s.matchShootId) + '\')"' : '';
+      const title = (s.genre || s.lastName)
+        ? (esc(s.genre) + ' ' + esc(s.lastName) + '様' + (s.people ? '(' + esc(s.people) + ')' : ''))
+        : esc(s.title || '(タイトル読み取り不可)');
+      const subParts = [];
+      if (s.ageGender) subParts.push(esc(s.ageGender));
+      if (s.memo) subParts.push(esc(s.memo));
+      const sub = subParts.length ? '<div class="row-sub">' + subParts.join(' / ') + '</div>' : '';
+      const matchLine = s.matchCustomerName
+        ? '<div class="row-sub">候補: ' + esc(s.matchCustomerName) + '様' +
+          (s.matchShootId ? ' → 過去の来店を見る' : '(過去の撮影記録なし)') + '</div>'
+        : '';
+      return '<li class="' + cls + '"' + onclick + '>' +
+        '<div class="row-main"><span>' + esc(s.time) + ' ' + title + '</span></div>' +
+        sub + matchLine + '</li>';
     }
 
     function reviewItemHtml_(it) {

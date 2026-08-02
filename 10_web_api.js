@@ -109,7 +109,9 @@ function getToday() {
 
   return {
     generatedAt: Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd HH:mm'),
-    todayShoots: readTodayShoots_(ss, customerById),
+    todayShoots: readTodayShoots_(ss),
+    // 朝の更新(13_morning.js)が失敗した場合のエラーを画面上部に表示するため(W4)
+    morningError: getMorningConfigValue_(ss, 'LAST_ERROR') || '',
     needsReview: needsReview,
     todo: todo,
     waiting: waiting
@@ -147,17 +149,28 @@ function sortByElapsedDesc_(list) {
   });
 }
 
-// Today_ShootsはmorningUpdate(W4)が生成するビュー。W1時点では存在しない/空のことがある。
-function readTodayShoots_(ss, customerById) {
+// Today_Shoots/Today_Shoot_Matchesは13_morning.jsのmorningUpdate()が生成するビュー。
+// 未実行時は存在しない/空のことがある。
+function readTodayShoots_(ss) {
   const sh = ss.getSheetByName('Today_Shoots');
   if (!sh) return [];
+  const matchesById = {};
+  readObjects_(ss, 'Today_Shoot_Matches').forEach(function (m) {
+    if (!matchesById[m.todayShootId]) matchesById[m.todayShootId] = [];
+    matchesById[m.todayShootId].push(m);
+  });
   return readObjects_(ss, 'Today_Shoots').map(function (r) {
-    const custName = r.顧客名 || (r.customerId && customerById[r.customerId] ? customerById[r.customerId].顧客名 : '');
+    const cand = (matchesById[r.id] || [])[0]; // 最有力候補のみ表示(確定は人)
     return {
       time: r.時刻 || '',
       genre: r.ジャンル || '',
-      customerName: custName || '',
-      shootId: r.shootId || ''
+      lastName: r.姓 || '',
+      people: r.人数 || '',
+      ageGender: r.年齢性別 || '',
+      memo: r.自由メモ || '',
+      title: r.タイトル || '',
+      matchCustomerName: cand ? cand.顧客名 : '',
+      matchShootId: cand ? cand.直近shootId : ''
     };
   });
 }
