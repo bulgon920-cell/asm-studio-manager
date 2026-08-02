@@ -27,6 +27,12 @@ function installBackupTrigger() {
   Logger.log('日次バックアップトリガーを設置しました(毎日' + BACKUP_TRIGGER_HOUR + '時台に実行)。');
 }
 
+// トリガーを待たず、今すぐ1回バックアップを取りたいとき用(RECOVERY.md参照)。
+// runDailyBackup()と同じ処理を分かりやすい名前で呼べるようにしただけ。
+function runBackupNow() {
+  runDailyBackup();
+}
+
 function runDailyBackup() {
   const folder = getOrCreateBackupFolder_();
   const name = 'ASM_backup_' + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyyMMdd_HHmmss');
