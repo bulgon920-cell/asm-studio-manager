@@ -31,5 +31,8 @@ const SOURCE_MASTER_LOG_ID = '1a4-g8kkowwKVTYO66gptatzknZhXjI-EKXSijXza_TE';
 // 大本Master_Logのシート(タブ)名。空欄 '' なら1枚目のシートを使う
 const SOURCE_MASTER_LOG_SHEET_NAME = 'Master_Log';
 
-// 朝の更新(13_morning.js)が読むGoogle CalendarのID。WEB_SPEC_v1.0.md §8で確定
-const CALENDAR_ID = 'bulgon920@yahoo.co.jp';
+// 朝の更新(13_morning.js)が読むGoogle CalendarのID。
+// カレンダーの表示名は「bulgon920@yahoo.co.jp」だが、これはbulgon920@gmail.com本人の
+// カレンダーに付けた表示名で、実際のカレンダーID(カレンダー設定→カレンダーの統合で確認)は
+// 本人のアドレスと同じ bulgon920@gmail.com。2026-08-02に実機確認して修正(WEB_SPEC §8も修正)。
+const CALENDAR_ID = 'bulgon920@gmail.com';
