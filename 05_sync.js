@@ -29,7 +29,7 @@ function syncCore_(dryRun) {
     const targetSs = SpreadsheetApp.openById(TARGET_SPREADSHEET_ID);
     ensureSyncInitialized_(targetSs);
 
-    const sourceSh = SpreadsheetApp.openById(SOURCE_MASTER_LOG_ID).getSheets()[0];
+    const sourceSh = getSourceMasterLogSheet_();
     const allRows = readMasterLogRows_(sourceSh);
 
     const lastRow = Number(getConfigValue_(targetSs, 'SYNC_LAST_ROW') || 0);
@@ -104,6 +104,15 @@ function ensureSyncInitialized_(targetSs) {
 }
 
 // ===== 大本Master_Logの読み取り(構造は02_migrate.jsのreadSnapshot_と同じ) =====
+
+function getSourceMasterLogSheet_() {
+  const ss = SpreadsheetApp.openById(SOURCE_MASTER_LOG_ID);
+  const sh = SOURCE_MASTER_LOG_SHEET_NAME
+    ? ss.getSheetByName(SOURCE_MASTER_LOG_SHEET_NAME)
+    : ss.getSheets()[0];
+  if (!sh) throw new Error('大本Master_Logのシートが見つかりません: ' + SOURCE_MASTER_LOG_SHEET_NAME);
+  return sh;
+}
 
 function readMasterLogRows_(sh) {
   const values = sh.getDataRange().getValues();

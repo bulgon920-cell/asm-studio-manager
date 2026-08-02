@@ -26,4 +26,7 @@ const CLEAR_BEFORE_MIGRATE = false;
 
 // 差分同期(05_sync.js)の読み先: 大本Master_Log(稼働中のもの)のスプレッドシートID
 // スナップショットではない。ここには一切書き込まない(読み取り専用)
-const SOURCE_MASTER_LOG_ID = 'ここに大本Master_LogのIDを貼る';
+const SOURCE_MASTER_LOG_ID = '1a4-g8kkowwKVTYO66gptatzknZhXjI-EKXSijXza_TE';
+
+// 大本Master_Logのシート(タブ)名。空欄 '' なら1枚目のシートを使う
+const SOURCE_MASTER_LOG_SHEET_NAME = 'Master_Log';
