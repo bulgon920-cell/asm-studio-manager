@@ -6,9 +6,9 @@
  * 読み取るだけ。ASM側では一切再計算しない。書き込みも一切行わない。
  *
  * 【現在の状態】
- * getSales(年,月): 実装済み(2025年04月シートを実読してブロック定義を確定)。
- * getAnnual(年): 実装済み(2026年店分析シートを実読してブロック定義を確定。
- * 行42以降の副次集計(葬儀・学校等)はSALES_SPEC_v1.0.md §2の対象外のため未読み取り)。
+ * getSales(年,月)・getAnnual(年)ともに実装済み。Web「売上」タブから利用中(2026-08-02)。
+ * 年次分析シートの行42以降の副次集計(葬儀・学校等)はSALES_SPEC_v1.0.md §2の
+ * 対象外のため未読み取り。
  *
  * sanitizeForClient_ は 10_web_api.js のものを再利用する(再定義しない)。
  */
@@ -50,16 +50,6 @@ function inspectSalesSheet(sheetName) {
     }
     if (cells.length) Logger.log('行' + (r + 1) + ': ' + cells.join(' | '));
   }
-}
-
-// ===== 調査用・一時呼び出し(セル配置確認が終わったら削除する) =====
-// スクリプトエディタのRunボタンは引数なし関数しか実行できないため、
-// 実際のシート名を書いた呼び出し専用の関数を用意する。
-function inspectSalesSheet_MonthlySample() {
-  inspectSalesSheet('2025年04月');
-}
-function inspectSalesSheet_AnnualSample() {
-  inspectSalesSheet('2026年店分析');
 }
 
 // ===== 月次シート ブロック定義(2025年04月を実読して確定。2026-08-02) =====
@@ -274,14 +264,4 @@ function getAnnual(year) {
     errorCellCount: errCounter.count
   };
   return sanitizeForClient_(result);
-}
-
-// ===== 調査用・一時呼び出し(getSales/getAnnual実装の検証用。確認後に削除する) =====
-function inspectSalesSheet_GetSalesTest() {
-  const data = getSales(2025, 4);
-  Logger.log(JSON.stringify(data, null, 2));
-}
-function inspectSalesSheet_GetAnnualTest() {
-  const data = getAnnual(2026);
-  Logger.log(JSON.stringify(data, null, 2));
 }
