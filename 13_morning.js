@@ -51,29 +51,6 @@ function morningUpdate() {
   }
 }
 
-// ===== 調査用(読み取り専用。「終日」誤表示の原因確認用。2026-08-03) =====
-// Today_Shootsシートの時刻列・allDay列の生の値と型をログに出す。書き込みは一切行わない。
-function debugTodayShootsTypes() {
-  const ss = SpreadsheetApp.openById(TARGET_SPREADSHEET_ID);
-  const sh = ss.getSheetByName('Today_Shoots');
-  if (!sh) { Logger.log('Today_Shootsシートがありません。先にmorningUpdate()を実行してください。'); return; }
-  const lastRow = sh.getLastRow(), lastCol = sh.getLastColumn();
-  if (lastRow < 2) { Logger.log('Today_Shootsにデータ行がありません。'); return; }
-  const values = sh.getRange(1, 1, lastRow, lastCol).getValues();
-  const headers = values[0];
-  const timeCol = headers.indexOf('時刻');
-  const allDayCol = headers.indexOf('allDay');
-  const titleCol = headers.indexOf('タイトル');
-  Logger.log('時刻列=' + timeCol + ' / allDay列=' + allDayCol + '(0始まりindex)');
-  for (var r = 1; r < values.length; r++) {
-    const t = values[r][timeCol];
-    const a = values[r][allDayCol];
-    Logger.log('行' + (r + 1) + ' [' + values[r][titleCol] + '] 時刻=' + JSON.stringify(t) +
-      ' (型:' + typeof t + (t instanceof Date ? '/Date型' : '') + ')' +
-      ' / allDay=' + JSON.stringify(a) + ' (型:' + typeof a + ')');
-  }
-}
-
 // ===== トリガー =====
 
 function installMorningTrigger() {
