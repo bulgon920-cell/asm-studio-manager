@@ -527,7 +527,15 @@
       if (tab === 'lifecycle' && !lifecycleLoaded_) loadLifecycle();
       if (tab === 'sales' && !salesInited_) {
         salesInited_ = true;
-        loadSalesMonthly();
+        // 今日の暦月にはまだ月次シートが無いことがあるため、シートが実在する
+        // 直近の月をサーバーに問い合わせてから月次ビューを開く。
+        google.script.run
+          .withSuccessHandler(function (latest) {
+            if (latest) { salesYear_ = latest.year; salesMonth_ = latest.month; }
+            loadSalesMonthly();
+          })
+          .withFailureHandler(function () { loadSalesMonthly(); })
+          .getLatestSalesMonth();
         loadSalesAnnual();
       }
     }

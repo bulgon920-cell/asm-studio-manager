@@ -169,6 +169,26 @@ function getSales(year, month) {
   return sanitizeForClient_(result);
 }
 
+// 月次シートは現行運用側で毎月作成されるため、今日の暦月にはまだシートが
+// 無いことがある(2026-08-03に実際に発生: 8月3日時点で「2026年08月」が未作成)。
+// Web側の初期表示は「今日の暦月」ではなく「シートが実在する直近の月」にする。
+function getLatestSalesMonth() {
+  const ss = SpreadsheetApp.openById(SALES_SOURCE_ID);
+  const now = new Date();
+  var y = now.getFullYear(), m = now.getMonth() + 1;
+  for (var i = 0; i < 36; i++) {
+    const sheetName = y + '年' + String(m).padStart(2, '0') + '月';
+    if (ss.getSheetByName(sheetName)) {
+      return sanitizeForClient_({ year: y, month: m });
+    }
+    m--;
+    if (m < 1) { m = 12; y--; }
+  }
+  // 過去36ヶ月に1つもシートが無い場合は今日の暦月をそのまま返す(見つからない旨は
+  // getSales側の found:false で画面に表示される)。
+  return sanitizeForClient_({ year: now.getFullYear(), month: now.getMonth() + 1 });
+}
+
 // ===== 年次分析シート ブロック定義(2026年店分析を実読して確定。2026-08-02) =====
 //
 // シート名: "YYYY年店分析"(A1セルに年が入っている)。
