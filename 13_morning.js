@@ -269,9 +269,20 @@ function regenerateTodayShootsSheet_(ss, rows) {
   if (lastRow > 1) sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).clearContent();
   if (!rows.length) return;
   // 「15:00」「2026-08-02」のような文字列はSheetsが時刻/日付値へ自動変換してしまうことが
-  // あり、実際に日付列でこれが起きてクライアント側の日付比較が一致しない不具合が発生した。
-  // 個別の列だけでなく、書き込み範囲全体を書き込み前にテキスト書式にして再発を防ぐ。
-  sh.getRange(2, 1, rows.length, TODAY_SHOOTS_HEADERS_.length).setNumberFormat('@');
+  // あり、電話番号も先頭0が落ちる場合があるため、対象列だけプレーンテキスト書式にしてから
+  // 書き込む。allDay列は対象に含めない: テキスト書式にすると真偽値のfalseが文字列"false"に
+  // なり、読み取り側の !!r.allDay が(空でない文字列は真のため)常にtrueになる不具合を
+  // 実際に確認した(2026-08-03。debugTodayShootsTypesの結果: allDay="false"(型:string)の
+  // ため全件「終日」表示になっていた)。
+  ['時刻', '電話番号', '日付'].forEach(function (header) {
+    const col = TODAY_SHOOTS_HEADERS_.indexOf(header) + 1;
+    sh.getRange(2, col, rows.length, 1).setNumberFormat('@');
+  });
+  // allDay列は過去の実行で'@'書式が付いてしまっている可能性がある(clearContent()は
+  // セルの値だけを消し、書式は引き継がれるため)。General書式へ明示的に戻してから
+  // 書き込むことで、既存シートでも真偽値がboolean型のまま保持されるようにする。
+  const allDayCol = TODAY_SHOOTS_HEADERS_.indexOf('allDay') + 1;
+  sh.getRange(2, allDayCol, rows.length, 1).setNumberFormat('General');
   const values = rows.map(todayShootRowToArray_);
   sh.getRange(2, 1, values.length, values[0].length).setValues(values);
 }

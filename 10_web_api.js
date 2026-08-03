@@ -188,6 +188,12 @@ function readTodayShoots_(ss) {
   // (書き込み側でテキスト書式は指定済みだが、念のため読み取り側でも二重に安全化する)。
   function safeDateStr_(v) { return (v instanceof Date) ? isoDate_(v) : (v || ''); }
   function safeTimeStr_(v) { return (v instanceof Date) ? Utilities.formatDate(v, 'Asia/Tokyo', 'HH:mm') : (v || ''); }
+  // allDayは本来boolean型のセルだが、書式変更等の影響で"true"/"false"文字列になっている
+  // 場合でも正しく判定する(空でない文字列は !! で常にtrueになってしまうため個別に見る)。
+  function safeAllDay_(v) {
+    if (typeof v === 'boolean') return v;
+    return String(v == null ? '' : v).trim().toLowerCase() === 'true';
+  }
 
   return readObjects_(ss, 'Today_Shoots')
     .map(function (r) {
@@ -196,7 +202,7 @@ function readTodayShoots_(ss) {
         eventId: r.eventId || '',
         date: safeDateStr_(r.日付),
         time: safeTimeStr_(r.時刻),
-        allDay: !!r.allDay,
+        allDay: safeAllDay_(r.allDay),
         category: r.category === 'shoot' ? 'shoot' : 'other',
         genre: r.ジャンル || '',
         lastName: r.姓 || '',
